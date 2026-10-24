@@ -1,0 +1,31 @@
+{
+  "name": "plateforme-ia-afrique",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "dev": "docker compose up -d --wait && concurrently -n api,web -c green,magenta \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "build": "npm run build -w apps/api && npm run build -w apps/web",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck -w apps/api && npm run typecheck -w apps/web",
+    "db:generate": "npm run db:generate -w apps/api",
+    "db:migrate": "npm run db:migrate -w apps/api",
+    "db:seed": "npm run db:seed -w apps/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "concurrently": "^9.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}
