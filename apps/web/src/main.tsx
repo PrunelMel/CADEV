@@ -6,6 +6,7 @@ import { Layout } from "./components/Layout";
 import { SignIn, SignUp } from "./pages/Auth";
 import { FaqPage, NotFoundPage } from "./pages/Faq";
 import { Home } from "./pages/Home";
+import { Landing } from "./features/landing/Landing";
 import { HubPage, RepoNewPage } from "./pages/Hub";
 import { OrgDetailPage, OrgNewPage } from "./pages/Orgs";
 import { ProblemDetailPage } from "./pages/ProblemDetail";
@@ -25,8 +26,9 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          <Route index element={<Landing />} />
           <Route element={<Layout />}>
-            <Route index element={<Home />} />
+            <Route path="accueil" element={<Home />} />
             <Route path="recherche" element={<SearchPage />} />
             <Route path="problemes" element={<ProblemsPage />} />
             <Route path="problemes/nouveau" element={<ProblemNewPage />} />

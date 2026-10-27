@@ -1,0 +1,797 @@
+/* Landing styles, all scoped under .landing so nothing leaks into the app. */
+
+/* Dark page behind the landing, so overscroll does not show the app's white body. */
+body:has(.landing) {
+  background: #080c18;
+}
+
+.landing {
+  --bg: #080c18;
+  --ink: #e6ebf4;
+  --muted: #8a95ab;
+  --line: rgba(148, 163, 190, 0.16);
+  --green: #45e085;
+  --red: #f24d4f;
+  --accent: #a397f7;
+  --dot: #4b5568;
+  --accent-ink: #0a0e19;
+  --display: "Bebas Neue", "Oswald", Impact, sans-serif;
+  --title: "Montserrat", "Geist", ui-sans-serif, sans-serif;
+  --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+.landing,
+.landing * {
+  box-sizing: border-box;
+}
+
+.landing {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+.landing {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ------------------------------------------------------------------ hero */
+
+/* Height is set inline from HERO_VH in content.ts. */
+.landing .hero {
+  position: relative;
+}
+
+.landing .hero__stage {
+  --p: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.landing .hero__canvas,
+.landing .hero__poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.landing .hero__poster {
+  object-fit: cover;
+  object-position: 75% 50%;
+}
+
+/* Every overlay fades with its own visibility --v (0..1), set per frame from the scroll. */
+.landing .fade {
+  --v: 1;
+  opacity: var(--v);
+  transform: translateY(calc((1 - var(--v)) * 24px));
+}
+
+/* Hero title block, left of the globe. */
+.landing .hero__intro {
+  position: absolute;
+  left: clamp(16px, 6vw, 96px);
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.landing .hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 28px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: rgba(12, 18, 34, 0.6);
+}
+
+.landing .hero__eyebrow svg {
+  color: var(--green);
+}
+
+/* Lockup, built like the reference:
+   THE AI AFRICA            fitted to the width of the row below (Hero.tsx)
+   NEEDS | [ WILL BE    ]   box = top 30% of the height
+         | BUILT BY US.     accent line fills the other 70%
+   Each text is trimmed to cap height so the parts line up exactly. */
+.landing .lockup {
+  margin: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.07em;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: min(8vw, 13.5vh, 136px);
+  line-height: 0.76;
+  text-transform: uppercase;
+}
+.landing .lockup__top,
+.landing .lockup__big,
+.landing .lockup__box span,
+.landing .lockup__accent {
+  text-box: trim-both cap alphabetic;
+}
+.landing .lockup__top {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.landing .lockup__row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.06em;
+}
+.landing .lockup__big {
+  color: var(--ink);
+}
+.landing .lockup__right {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.landing .lockup__box {
+  flex: 0 0 30%;
+  display: flex;
+  align-items: center;
+  padding: 0 0.06em;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.landing .lockup__box span {
+  font-size: 0.165em;
+  white-space: nowrap;
+}
+.landing .lockup__accent {
+  font-size: 0.65em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.landing .hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 36px;
+}
+
+.landing .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
+}
+
+.landing .btn--primary {
+  background: var(--ink);
+  color: var(--bg);
+}
+.landing .btn--primary:hover {
+  transform: translateY(-1px);
+}
+.landing .btn--ghost {
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: rgba(12, 18, 34, 0.5);
+}
+.landing .btn--ghost:hover {
+  border-color: rgba(148, 163, 190, 0.4);
+}
+
+.landing .hero__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: clamp(0, 1 - var(--p) * 14, 1);
+}
+
+.landing .hero__hint svg {
+  animation: landing-nudge 1.8s ease-in-out infinite;
+}
+
+@keyframes landing-nudge {
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+/* Status card fades in once the markers are mostly revealed. */
+.landing .hero__status {
+  position: absolute;
+  right: clamp(16px, 4vw, 56px);
+  bottom: clamp(16px, 6vh, 56px);
+  min-width: 220px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(10, 15, 30, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Two stacked layers, West Africa then Southern Africa, crossfaded with --s during the pan. */
+.landing .hero__status {
+  --s: 0;
+  display: grid;
+}
+.landing .hero__status-layer {
+  grid-area: 1 / 1;
+  transition: none;
+}
+.landing .hero__status-layer--west {
+  opacity: clamp(0, 1 - var(--s) * 2, 1);
+}
+.landing .hero__status-layer--south {
+  opacity: clamp(0, var(--s) * 2 - 1, 1);
+}
+
+.landing .hero__status-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.landing .hero__status-region {
+  margin-left: auto;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.landing .hero__status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.landing .hero__status-row strong {
+  margin-left: auto;
+  font: 600 14px/1 var(--mono);
+}
+
+.landing .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.landing .dot--online {
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(69, 224, 133, 0.15);
+}
+.landing .dot--offline {
+  background: var(--red);
+  box-shadow: 0 0 0 4px rgba(242, 77, 79, 0.15);
+}
+
+/* ------------------------------------------------------------------ story panels */
+
+/* Each panel covers the stage; its soft dark fade keeps the text readable over the dots. */
+.landing .panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+  padding: clamp(24px, 8vh, 96px) clamp(16px, 6vw, 96px);
+}
+.landing .panel > * {
+  pointer-events: auto;
+}
+.landing .panel--left {
+  align-items: center;
+  background: linear-gradient(
+    90deg,
+    rgba(8, 12, 24, 0.82) 0%,
+    rgba(8, 12, 24, 0.55) 38%,
+    rgba(8, 12, 24, 0) 62%
+  );
+}
+.landing .panel--top {
+  justify-content: center;
+  align-items: flex-start;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 12, 24, 0.85) 0%,
+    rgba(8, 12, 24, 0.55) 34%,
+    rgba(8, 12, 24, 0) 58%
+  );
+}
+/* The first section sits beside the turning globe: no fade needed there. */
+.landing #sovereignty {
+  background: none;
+}
+
+.landing .story {
+  display: grid;
+  gap: 18px;
+  justify-items: start;
+  max-width: 620px;
+}
+.landing .story--center {
+  justify-items: center;
+  text-align: center;
+  max-width: 880px;
+}
+.landing .story__label {
+  margin: 0;
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.landing .story__text {
+  margin: 0;
+  max-width: 520px;
+  font-size: clamp(15px, 1.15vw, 17px);
+  line-height: 1.65;
+  color: #b7c0d2;
+}
+.landing .story__cta {
+  margin-top: 8px;
+}
+
+/* Title style 1, "Never look back": words on a color block, plain lines around them. */
+.landing .stitle {
+  margin: 0;
+  font-family: var(--title);
+  text-transform: uppercase;
+}
+.landing .stitle--block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.08em;
+  font-size: clamp(26px, 3.4vw, 48px);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+}
+.landing .stitle__blk {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 900;
+  padding: 0.08em 0.16em 0.04em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.landing .stitle__pl {
+  font-weight: 600;
+  color: var(--ink);
+  padding-left: 0.06em;
+}
+
+/* Title style 2, "Fast render / Easy to use": small spaced line over a big tracked line, green squares. */
+.landing .stitle--center {
+  display: grid;
+  justify-items: center;
+  gap: 0.55em;
+}
+.landing .stitle__kick {
+  font-size: clamp(12px, 1.2vw, 16px);
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: #c9d1e0;
+}
+.landing .stitle__main {
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+  font-size: clamp(22px, 3.4vw, 46px);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.landing .stitle__main::before,
+.landing .stitle__main::after {
+  content: "";
+  flex: 0 0 auto;
+  width: max(7px, 0.16em);
+  height: max(7px, 0.16em);
+  margin-top: -0.4em;
+  background: var(--green);
+  box-shadow: 0 0 12px rgba(69, 224, 133, 0.6);
+}
+@media (min-width: 760px) {
+  .landing .stitle__blk,
+  .landing .stitle__pl,
+  .landing .stitle__main {
+    white-space: nowrap;
+  }
+}
+
+/* Phones and portrait screens: copy on top, map below. */
+@media (max-aspect-ratio: 23/20) {
+  .landing .hero__intro {
+    top: clamp(72px, 10vh, 120px);
+    translate: none;
+    left: 16px;
+    right: 16px;
+  }
+  .landing .lockup {
+    font-size: min(14.5vw, 96px);
+  }
+  .landing .hero__actions {
+    margin-top: 28px;
+  }
+  .landing .panel {
+    padding: 64px 16px 24px;
+  }
+  .landing .panel--left,
+  .landing #sovereignty {
+    align-items: flex-start;
+    background: linear-gradient(
+      180deg,
+      rgba(8, 12, 24, 0.85) 0%,
+      rgba(8, 12, 24, 0.6) 40%,
+      rgba(8, 12, 24, 0) 62%
+    );
+  }
+  .landing .story__text {
+    font-size: 15px;
+  }
+  .landing .stitle__kick {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+  }
+  .landing .stitle__main {
+    letter-spacing: 0.06em;
+    gap: 0.5em;
+  }
+  .landing .hero__status {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    min-width: 0;
+  }
+  .landing #join {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing .hero__hint svg {
+    animation: none;
+  }
+  .landing .fade {
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ closing */
+
+/* Closing beside the globe, in the same place as the hero title at the start. */
+.landing .hero__closing {
+  position: absolute;
+  left: clamp(16px, 6vw, 96px);
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  max-width: min(520px, 42vw);
+}
+.landing .hero__closing .hero__actions {
+  margin-top: 8px;
+}
+.landing .hero__closing .story__text {
+  max-width: 420px;
+}
+
+@media (max-aspect-ratio: 23/20) {
+  .landing .hero__closing {
+    top: clamp(64px, 9vh, 110px);
+    translate: none;
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    gap: 18px;
+  }
+  .landing .hero__closing .story__text {
+    max-width: none;
+  }
+}
+
+/* ------------------------------------------------------------------ footer */
+
+.landing .footer {
+  position: relative;
+  border-top: 1px solid var(--line);
+  background:
+    radial-gradient(var(--dot) 1px, transparent 1.4px) 0 0 / 18px 18px,
+    var(--bg);
+  background-blend-mode: normal;
+  padding: 72px clamp(16px, 6vw, 96px) 32px;
+}
+.landing .footer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8, 12, 24, 0.75), rgba(8, 12, 24, 0.94) 40%);
+  pointer-events: none;
+}
+.landing .footer > * {
+  position: relative;
+}
+.landing .footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 48px;
+}
+.landing .footer__brand {
+  display: grid;
+  gap: 14px;
+  max-width: 320px;
+}
+.landing .footer__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+  text-decoration: none;
+  font-family: var(--title);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.landing .footer__tagline {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.landing .footer__cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 48px 72px;
+}
+.landing .footer__col-title {
+  margin: 0 0 14px;
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.landing .footer__col ul,
+.landing .footer__socials {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.landing .footer__col li + li {
+  margin-top: 10px;
+}
+.landing .footer a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.landing .footer__col a {
+  font-size: 15px;
+  color: #c3cbdb;
+}
+.landing .footer a:hover {
+  color: #fff;
+}
+.landing .footer a:focus-visible,
+.landing .btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.landing .footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 32px;
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+.landing .footer__bottom p {
+  margin: 0;
+}
+.landing .footer__socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+.landing .footer__socials a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #c3cbdb;
+}
+
+/* Beside the globe, the first section keeps to the free space on the left. */
+@media (min-aspect-ratio: 23/20) {
+  .landing #sovereignty .story {
+    max-width: min(460px, 36vw);
+  }
+  .landing #sovereignty .stitle--block {
+    font-size: clamp(24px, 2.8vw, 42px);
+  }
+}
+
+/* ------------------------------------------------------------------ steps (Southern Africa) */
+
+/* Sequential number reveal, 1 > 12 > 123.
+   --step (0, 1, 2) comes from data-step on the panel. For each number i:
+   settled = 1 when i <= step, else 0. Settled numbers sit side by side from
+   the left; the others wait faded at the right edge, partly clipped. */
+.landing .steps-panel[data-step="0"] {
+  --step: 0;
+}
+.landing .steps-panel[data-step="1"] {
+  --step: 1;
+}
+.landing .steps-panel[data-step="2"] {
+  --step: 2;
+}
+
+.landing .steps {
+  --n: 3;
+  --num: clamp(96px, 10vw, 150px);
+  --slot: calc(var(--num) * 0.64);
+  --gap: 32px;
+  --lime: #9bcb2a;
+  --lime-soft: rgba(197, 216, 107, 0.24);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  container-type: inline-size;
+  width: min(780px, 62vw);
+  height: calc(var(--num) * 0.42 + 190px);
+  overflow: hidden;
+}
+
+.landing .steps__nums {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: var(--num);
+}
+.landing .steps__num {
+  --settled: clamp(0, var(--step) - var(--i) + 1, 1);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--sans);
+  font-size: var(--num);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--lime-soft);
+  transform: translateX(
+    calc(
+      var(--settled) * var(--i) * var(--slot) + (1 - var(--settled)) *
+        (100cqw - var(--slot) * (var(--n) - var(--i)) + var(--slot) * 0.3)
+    )
+  );
+  transition:
+    transform 850ms var(--ease),
+    color 850ms var(--ease);
+}
+.landing .steps-panel[data-step="0"] .steps__num:nth-child(1),
+.landing .steps-panel[data-step="1"] .steps__num:nth-child(-n + 2),
+.landing .steps-panel[data-step="2"] .steps__num {
+  color: var(--lime);
+}
+
+/* The active step's text sits just right of the last settled number and
+   moves along with it; the others are hidden in the same spot. */
+.landing .steps__copies {
+  position: absolute;
+  top: calc(var(--num) * 0.42);
+  left: 0;
+  width: min(330px, 100cqw - var(--slot) * 3 - var(--gap));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  transform: translateX(calc((var(--step) + 1) * var(--slot) + var(--gap)));
+  transition: transform 850ms var(--ease);
+}
+.landing .steps__copy {
+  --active: calc(1 - min(1, max(var(--step) - var(--i), var(--i) - var(--step))));
+  grid-area: 1 / 1;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  opacity: var(--active);
+  transform: translateX(calc((1 - var(--active)) * 14px));
+  transition:
+    opacity 400ms var(--ease) 250ms,
+    transform 400ms var(--ease) 250ms;
+}
+.landing .steps__title {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: clamp(18px, 1.5vw, 22px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.landing .steps__text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #b7c0d2;
+}
+
+.landing .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Phones: numbers on top across the width, text underneath. */
+@media (max-aspect-ratio: 23/20) {
+  .landing .steps {
+    --num: 88px;
+    --gap: 0px;
+    width: 100%;
+    height: calc(var(--num) + 230px);
+  }
+  .landing .steps__copies {
+    top: calc(var(--num) + 20px);
+    width: 100%;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing .steps__num,
+  .landing .steps__copies {
+    transition-duration: 1ms;
+  }
+  .landing .steps__copy {
+    transform: none;
+    transition: opacity 200ms linear;
+  }
+}
