@@ -28,6 +28,8 @@ export const heroCopy = {
 };
 
 export const mapConfig = {
+  idleSpin: 6,          // degrees per second (6 = one turn per minute), 0 turns it off
+  idleSpinStop: 0.01,
   /** Grid step in degrees. Smaller means more, finer dots. */
   cell: 0.9,
   /** Continent bounds used to frame the opening shot (lon, lat). */
