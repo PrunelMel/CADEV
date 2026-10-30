@@ -40,17 +40,23 @@ export async function solutionsForProblem(problemId: string) {
   );
   return rows.map(({ license, ...r }) => ({
     ...r,
-    license: { id: license.id, name: license.name, restrictions: restrictionsOf(license) },
+    license: {
+      id: license.id,
+      name: license.name,
+      restrictions: restrictionsOf(license),
+    },
     validations: history.get(r.id) ?? [],
   }));
 }
 
 export async function submitSolution(problemId: string, input: SubmitSolution, userId: string) {
   const [problem] = await db
-    .select({ id: t.problems.id })
+    .select({ id: t.problems.id, status: t.problems.status })
     .from(t.problems)
     .where(eq(t.problems.id, problemId));
   if (!problem) throw notFound("Problème");
+  if (problem.status === "closed")
+    throw badRequest("Ce problème est fermé aux nouvelles propositions");
   const { repo, access } = await findRepo(input.repo.owner, input.repo.name, userId);
   if (!access.write) throw forbidden("Vous devez pouvoir écrire sur ce dépôt pour le proposer");
   if (repo.visibility !== "public") throw badRequest("Seul un dépôt public peut être proposé");

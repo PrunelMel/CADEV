@@ -1,29 +1,53 @@
 import { Link, useSearchParams } from "react-router";
 import { useSearch } from "../api/hooks";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { RepoLink } from "../components/Lists";
-import { Query, Section, Tag, statusTone } from "../components/ui";
-import { repoTypeLabels, statusLabels } from "../content/site";
+import {
+  EmptyState,
+  PageHeader,
+  Query,
+  Section,
+  Tag,
+  problemStatusTone,
+  statusTone,
+} from "../components/ui";
+import { problemStatusLabels, repoTypeLabels, statusLabels } from "../content/site";
 
 export function SearchPage() {
   const [params] = useSearchParams();
   const q = params.get("q") ?? "";
   const result = useSearch(q);
+  usePageTitle(q ? `Recherche : ${q}` : "Recherche");
+  if (q.trim().length < 2) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Recherche" />
+        <EmptyState>Saisissez au moins deux caractères, par exemple « manioc ».</EmptyState>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Résultats pour « {q} »</h1>
+      <PageHeader
+        title={<>Résultats pour « {q} »</>}
+        intro="Les problèmes d'abord, avec les solutions déjà tentées, puis les autres dépôts."
+      />
       <Query query={result}>
         {({ problems, repos }) => (
           <>
             <Section title="Problèmes">
               {problems.length ? (
-                <ul className="space-y-4">
+                <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200">
                   {problems.map((p) => (
-                    <li key={p.id} className="space-y-1">
+                    <li key={p.id} className="space-y-1 px-4 py-3">
                       <Link to={`/problemes/${p.id}`} className="font-medium hover:underline">
                         {p.title}
                       </Link>
-                      <p className="text-xs text-neutral-500">
+                      <p className="flex items-center gap-2 text-xs text-neutral-500">
+                        <Tag tone={problemStatusTone[p.status]}>
+                          {problemStatusLabels[p.status]}
+                        </Tag>
                         {p.sector} · {p.country}
                       </p>
                       {p.solutions.length > 0 && (
@@ -44,12 +68,15 @@ export function SearchPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-neutral-500">
-                  Aucun problème trouvé.{" "}
-                  <Link to="/problemes/nouveau" className="underline">
-                    Publier ce problème
-                  </Link>
-                </p>
+                <EmptyState
+                  action={
+                    <Link to="/problemes/nouveau" className="font-medium text-accent underline">
+                      Publier ce problème
+                    </Link>
+                  }
+                >
+                  Personne n'a encore décrit ce problème.
+                </EmptyState>
               )}
             </Section>
             {repos.length > 0 && (

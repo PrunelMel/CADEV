@@ -1,7 +1,8 @@
-import { ArrowUpRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { Link } from "react-router";
 import { footer } from "../../content/landing";
 
-/** Simple dot mark used until a real logo is set in content.ts. */
+/** Marque à points, en attendant un vrai logo dans content/landing.ts. */
 function DotMark() {
   const dots = [];
   for (let y = 0; y < 4; y++) {
@@ -30,21 +31,21 @@ export function Footer() {
     <footer id="next" className="footer">
       <div className="footer__inner">
         <div className="footer__brand">
-          <a className="footer__logo" href="#">
+          <Link className="footer__logo" to="/accueil">
             {footer.logo ? <img src={footer.logo} alt="" height={28} /> : <DotMark />}
             <span>{footer.name}</span>
-          </a>
+          </Link>
           <p className="footer__tagline">{footer.tagline}</p>
         </div>
 
-        <nav className="footer__cols" aria-label="Footer">
+        <nav className="footer__cols" aria-label="Pied de page">
           {footer.columns.map((col) => (
             <div key={col.title} className="footer__col">
               <p className="footer__col-title">{col.title}</p>
               <ul>
                 {col.links.map((l) => (
                   <li key={l.label}>
-                    <a href={l.href}>{l.label}</a>
+                    <Link to={l.href}>{l.label}</Link>
                   </li>
                 ))}
               </ul>
@@ -55,15 +56,13 @@ export function Footer() {
 
       <div className="footer__bottom">
         <p>{footer.legal}</p>
-        <ul className="footer__socials" aria-label="Social accounts">
-          {footer.socials.map((s) => (
-            <li key={s.label}>
-              <a href={s.href} target="_blank" rel="noreferrer">
-                {s.label}
-                <ArrowUpRight size={14} strokeWidth={2} />
-              </a>
-            </li>
-          ))}
+        <ul className="footer__socials">
+          <li>
+            <Link to="/accueil">
+              Entrer dans la plateforme
+              <ArrowRight size={14} strokeWidth={2} />
+            </Link>
+          </li>
         </ul>
       </div>
     </footer>

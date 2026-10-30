@@ -65,7 +65,7 @@ La plupart des gens qui ont besoin d'IA ne savent pas quel modèle chercher. Ils
 | Stockage fichiers | MinIO (compatible S3), auto-hébergé via Docker, client `minio` côté API              |
 | Lancement         | `concurrently` depuis la racine                                                      |
 
-Dépendances ajoutées au-delà de la stack imposée : `minio` (client S3), `pg` (pilote Postgres de Drizzle), `tsx` (exécution TypeScript en dev), `@tailwindcss/vite`.
+Dépendances ajoutées au-delà de la stack imposée : `minio` (client S3), `pg` (pilote Postgres de Drizzle), `tsx` (exécution TypeScript en dev), `@tailwindcss/vite`, `react-markdown` et `remark-gfm` (rendu des fiches Markdown, HTML brut ignoré).
 
 ---
 
@@ -114,7 +114,10 @@ npm install
 docker compose up -d --wait
 npm run db:migrate
 npm run db:seed           # catalogue de licences
+npm run db:demo           # facultatif : données de démonstration
 ```
+
+Les données de démo créent quatre comptes (`aminata`, `koffi`, `yasmine`, `sena`, mot de passe `demo-cadev-2026`), l'organisation `agrinova-benin`, cinq dépôts avec leurs fichiers et quatre problèmes avec solutions, contributions et discussions. Le script ne fait rien si ces comptes existent déjà.
 
 ### Lancement
 
@@ -144,46 +147,48 @@ Une seule commande démarre Postgres et MinIO (et attend qu'ils soient prêts), 
 | `npm run db:generate` | Génère une migration Drizzle                  |
 | `npm run db:migrate`  | Applique les migrations                       |
 | `npm run db:seed`     | Insère ou met à jour le catalogue de licences |
+| `npm run db:demo`     | Insère les données de démonstration           |
+| `npm test`            | Tests de bout en bout de l'API (API lancée)   |
 
 ---
 
 ## Modèle de données
 
-| Entité                                           | Rôle                                                                                                       |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `users`, `sessions`, `accounts`, `verifications` | Comptes (gérés par better-auth, plugin nom d'utilisateur)                                                  |
-| `organizations`, `organization_members`          | Organisations simples et leurs membres (admin ou membre)                                                   |
-| `repositories`                                   | Dépôts : type, visibilité, propriétaire (utilisateur ou organisation), licence, fiche, limites, provenance |
-| `repository_collaborators`                       | Collaborateurs d'un dépôt                                                                                  |
-| `repository_versions`, `repository_files`        | Chaque modification crée une version complète ; les fichiers pointent vers le stockage                     |
-| `pull_requests`, `pull_request_files`            | Propositions de fichiers basées sur une version, fusionnées par le propriétaire ou un collaborateur        |
-| `problems`                                       | Défis : description, secteur, pays, contraintes terrain, critères d'évaluation                             |
-| `solutions`                                      | Lien entre un problème et un dépôt public, avec résultats terrain et statut                                |
-| `data_contributions`                             | Contributions de données à un problème, avec provenance et dataset lié facultatif                          |
-| `validations`                                    | Historique des décisions sur une solution ou une contribution                                              |
-| `licenses`                                       | Catalogue de licences avec leurs restrictions                                                              |
-| `likes`, `discussions`                           | Couche communautaire (discussions sur dépôts, problèmes et pull requests)                                  |
+| Entité                                           | Rôle                                                                                                                                                                     |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `users`, `sessions`, `accounts`, `verifications` | Comptes (gérés par better-auth, plugin nom d'utilisateur)                                                                                                                |
+| `organizations`, `organization_members`          | Organisations simples et leurs membres (admin ou membre)                                                                                                                 |
+| `repositories`                                   | Dépôts : type, visibilité, propriétaire (utilisateur ou organisation), licence, fiche, limites, provenance, fiche technique (tâche, langues, hors ligne, matériel cible) |
+| `repository_collaborators`                       | Collaborateurs d'un dépôt                                                                                                                                                |
+| `repository_versions`, `repository_files`        | Chaque modification crée une version complète ; les fichiers pointent vers le stockage                                                                                   |
+| `pull_requests`, `pull_request_files`            | Propositions de fichiers basées sur une version, fusionnées par le propriétaire ou un collaborateur                                                                      |
+| `problems`                                       | Défis : description, secteur, pays, contraintes terrain, critères d'évaluation, statut (ouvert, résolu, fermé)                                                           |
+| `solutions`                                      | Lien entre un problème et un dépôt public, avec résultats terrain et statut                                                                                              |
+| `data_contributions`                             | Contributions de données à un problème, avec provenance et dataset lié facultatif                                                                                        |
+| `validations`                                    | Historique des décisions sur une solution ou une contribution                                                                                                            |
+| `licenses`                                       | Catalogue de licences avec leurs restrictions                                                                                                                            |
+| `likes`, `discussions`                           | Couche communautaire (discussions sur dépôts, problèmes et pull requests)                                                                                                |
 
 ## API (préfixe `/api`)
 
 Erreurs : `{ error: { code, message, details? } }`. Un dépôt privé inaccessible répond 404.
 
-| Ressource      | Routes                                                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth           | `/api/auth/*` (better-auth)                                                                                                                        |
-| Utilisateurs   | `GET /api/users/:username`, `GET /api/me/namespaces`                                                                                               |
-| Organisations  | `POST /api/orgs`, `GET /api/orgs/:slug`, `POST /api/orgs/:slug/members`, `DELETE /api/orgs/:slug/members/:username`                                |
-| Dépôts         | `GET/POST /api/repos`, `GET/PATCH /api/repos/:owner/:name`, `GET /api/repos/:owner/:name/versions`                                                 |
-| Fichiers       | `GET/PUT/DELETE /api/repos/:owner/:name/files/*path` (corps PUT = contenu brut, `?message=`, `?version=` en lecture)                               |
-| Collaborateurs | `GET/POST /api/repos/:owner/:name/collaborators`, `DELETE .../collaborators/:username`                                                             |
-| Likes          | `PUT/DELETE /api/repos/:owner/:name/like`                                                                                                          |
-| Pull requests  | `GET/POST .../pulls`, `GET .../pulls/:number`, `PUT .../pulls/:number/files/*path`, `POST .../pulls/:number/merge`, `POST .../pulls/:number/close` |
-| Problèmes      | `GET/POST /api/problems`, `GET /api/problems/:id`                                                                                                  |
-| Solutions      | `GET/POST /api/problems/:id/solutions`, `POST /api/solutions/:id/validate`                                                                         |
-| Contributions  | `GET/POST /api/problems/:id/contributions`, `POST /api/contributions/:id/validate`                                                                 |
-| Discussions    | `GET/POST` sur `.../discussions` d'un dépôt, d'un problème ou d'une pull request                                                                   |
-| Licences       | `GET /api/licenses`                                                                                                                                |
-| Recherche      | `GET /api/search?q=` (plein texte français : problèmes, puis leurs solutions, puis autres dépôts)                                                  |
+| Ressource      | Routes                                                                                                                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Auth           | `/api/auth/*` (better-auth)                                                                                                                                                                                  |
+| Utilisateurs   | `GET /api/users/:username`, `GET /api/me/namespaces`, `GET /api/me/dashboard`                                                                                                                                |
+| Organisations  | `POST /api/orgs`, `GET /api/orgs/:slug`, `POST /api/orgs/:slug/members`, `DELETE /api/orgs/:slug/members/:username`                                                                                          |
+| Dépôts         | `GET/POST /api/repos` (filtres `type`, `q`, `offline`, `language`), `GET/PATCH /api/repos/:owner/:name`, `GET /api/repos/:owner/:name/versions`, `GET /api/languages`                                        |
+| Fichiers       | `GET/PUT/DELETE /api/repos/:owner/:name/files/*path` (corps PUT = contenu brut, `?message=`, `?version=` en lecture)                                                                                         |
+| Collaborateurs | `GET/POST /api/repos/:owner/:name/collaborators`, `DELETE .../collaborators/:username`                                                                                                                       |
+| Likes          | `PUT/DELETE /api/repos/:owner/:name/like`                                                                                                                                                                    |
+| Pull requests  | `GET/POST .../pulls`, `GET .../pulls/:number`, `PUT .../pulls/:number/files/*path`, `POST .../pulls/:number/merge`, `POST .../pulls/:number/close`                                                           |
+| Problèmes      | `GET/POST /api/problems` (filtres `sector`, `country`, `status`, `q`), `GET/PATCH /api/problems/:id`, `GET /api/problems/:id/suggestions`, `PUT/DELETE /api/problems/:id/work`, `GET /api/problem-countries` |
+| Solutions      | `GET/POST /api/problems/:id/solutions`, `POST /api/solutions/:id/validate`                                                                                                                                   |
+| Contributions  | `GET/POST /api/problems/:id/contributions`, `POST /api/contributions/:id/validate`                                                                                                                           |
+| Discussions    | `GET/POST` sur `.../discussions` d'un dépôt, d'un problème ou d'une pull request                                                                                                                             |
+| Licences       | `GET /api/licenses`                                                                                                                                                                                          |
+| Recherche      | `GET /api/search?q=` (plein texte français : problèmes, puis leurs solutions, puis autres dépôts)                                                                                                            |
 
 ---
 

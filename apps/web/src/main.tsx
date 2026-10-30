@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Layout } from "./components/Layout";
+import { RequireAuth } from "./components/RequireAuth";
 import { SignIn, SignUp } from "./pages/Auth";
 import { FaqPage, NotFoundPage } from "./pages/Faq";
 import { Home } from "./pages/Home";
@@ -10,7 +11,8 @@ import { Landing } from "./features/landing/Landing";
 import { HubPage, RepoNewPage } from "./pages/Hub";
 import { OrgDetailPage, OrgNewPage } from "./pages/Orgs";
 import { ProblemDetailPage } from "./pages/ProblemDetail";
-import { ProblemNewPage, ProblemsPage } from "./pages/Problems";
+import { DashboardPage } from "./pages/Dashboard";
+import { ProblemEditPage, ProblemNewPage, ProblemsPage } from "./pages/Problems";
 import { ProfilePage } from "./pages/Profile";
 import { PullDetailPage } from "./pages/PullDetail";
 import { RepoDetailPage } from "./pages/RepoDetail";
@@ -31,11 +33,15 @@ createRoot(document.getElementById("root")!).render(
             <Route path="accueil" element={<Home />} />
             <Route path="recherche" element={<SearchPage />} />
             <Route path="problemes" element={<ProblemsPage />} />
-            <Route path="problemes/nouveau" element={<ProblemNewPage />} />
             <Route path="problemes/:id" element={<ProblemDetailPage />} />
             <Route path="hub" element={<HubPage />} />
-            <Route path="nouveau-depot" element={<RepoNewPage />} />
-            <Route path="orgs/nouvelle" element={<OrgNewPage />} />
+            <Route element={<RequireAuth />}>
+              <Route path="problemes/nouveau" element={<ProblemNewPage />} />
+              <Route path="problemes/:id/modifier" element={<ProblemEditPage />} />
+              <Route path="tableau-de-bord" element={<DashboardPage />} />
+              <Route path="nouveau-depot" element={<RepoNewPage />} />
+              <Route path="orgs/nouvelle" element={<OrgNewPage />} />
+            </Route>
             <Route path="orgs/:slug" element={<OrgDetailPage />} />
             <Route path="u/:username" element={<ProfilePage />} />
             <Route path="connexion" element={<SignIn />} />

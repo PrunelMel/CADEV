@@ -1,12 +1,18 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
-import { authClient } from "../api/auth";
+import { Link, useNavigate, useSearchParams } from "react-router";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { authClient, useSession } from "../api/auth";
 import { Button, ErrorText, Field, Input, formValues } from "../components/ui";
 
 function useAuthForm(
   run: (v: Record<string, string>) => Promise<{ error: { message?: string } | null }>,
 ) {
   const navigate = useNavigate();
+  const { refetch } = useSession();
+  const [params] = useSearchParams();
+  // Retour à la page d'origine si elle est interne, sinon au tableau de bord.
+  const next = params.get("suite");
+  const target = next?.startsWith("/") && !next.startsWith("//") ? next : "/tableau-de-bord";
   const [error, setError] = useState<Error | null>(null);
   const [pending, setPending] = useState(false);
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -16,19 +22,27 @@ function useAuthForm(
     const { error } = await run(formValues(e.currentTarget));
     setPending(false);
     if (error) setError(new Error(error.message ?? "Échec"));
-    else navigate("/");
+    else {
+      // La session doit être à jour avant d'atteindre une page réservée aux membres.
+      await refetch();
+      navigate(target);
+    }
   }
   return { onSubmit, error, pending };
 }
 
 export function SignIn() {
+  usePageTitle("Connexion");
   const form = useAuthForm((v) =>
     v.login.includes("@")
       ? authClient.signIn.email({ email: v.login, password: v.password })
       : authClient.signIn.username({ username: v.login, password: v.password }),
   );
   return (
-    <form onSubmit={form.onSubmit} className="mx-auto max-w-sm space-y-4">
+    <form
+      onSubmit={form.onSubmit}
+      className="mx-auto max-w-sm space-y-4 rounded-lg border border-neutral-200 p-6"
+    >
       <h1 className="text-xl font-semibold">Connexion</h1>
       <Field label="Email ou nom d'utilisateur">
         <Input name="login" required autoComplete="username" />
@@ -37,7 +51,9 @@ export function SignIn() {
         <Input name="password" type="password" required autoComplete="current-password" />
       </Field>
       <ErrorText error={form.error} />
-      <Button disabled={form.pending}>Se connecter</Button>
+      <Button disabled={form.pending} className="w-full">
+        Se connecter
+      </Button>
       <p className="text-sm">
         Pas de compte ?{" "}
         <Link to="/inscription" className="underline">
@@ -49,6 +65,7 @@ export function SignIn() {
 }
 
 export function SignUp() {
+  usePageTitle("Inscription");
   const form = useAuthForm((v) =>
     authClient.signUp.email({
       email: v.email,
@@ -58,7 +75,10 @@ export function SignUp() {
     }),
   );
   return (
-    <form onSubmit={form.onSubmit} className="mx-auto max-w-sm space-y-4">
+    <form
+      onSubmit={form.onSubmit}
+      className="mx-auto max-w-sm space-y-4 rounded-lg border border-neutral-200 p-6"
+    >
       <h1 className="text-xl font-semibold">Inscription</h1>
       <Field label="Nom affiché">
         <Input name="name" required />
@@ -73,7 +93,15 @@ export function SignUp() {
         <Input name="password" type="password" required minLength={8} autoComplete="new-password" />
       </Field>
       <ErrorText error={form.error} />
-      <Button disabled={form.pending}>Créer le compte</Button>
+      <Button disabled={form.pending} className="w-full">
+        Créer le compte
+      </Button>
+      <p className="text-sm">
+        Déjà inscrit ?{" "}
+        <Link to="/connexion" className="underline">
+          Connexion
+        </Link>
+      </p>
     </form>
   );
 }

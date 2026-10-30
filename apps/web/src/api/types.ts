@@ -3,6 +3,7 @@
 export type RepoType = "model" | "dataset" | "library";
 export type Visibility = "public" | "private";
 export type ReviewStatus = "pending" | "accepted" | "rejected";
+export type ProblemStatus = "open" | "solved" | "closed";
 
 export type License = {
   id: string;
@@ -21,8 +22,14 @@ export type RepoSummary = {
   description: string;
   provenanceCommunity: string | null;
   provenanceCountry: string | null;
+  ownerKind: "user" | "org";
+  task: string;
+  languages: string[];
+  worksOffline: boolean;
+  targetHardware: string;
   updatedAt: string;
   license?: License;
+  likes?: number;
 };
 
 export type RepoFile = { path: string; size: number; sha256: string };
@@ -40,7 +47,12 @@ export type RepoDetail = RepoSummary & {
   permissions: { read: boolean; write: boolean; owner: boolean };
 };
 
-export type Version = { number: number; message: string; createdAt: string; author: string };
+export type Version = {
+  number: number;
+  message: string;
+  createdAt: string;
+  author: string;
+};
 
 export type PullSummary = {
   number: number;
@@ -60,16 +72,22 @@ export type PullDetail = Omit<PullSummary, "author"> & {
   permissions: { upload: boolean; merge: boolean; close: boolean };
 };
 
-export type Validation = { decision: "accepted" | "rejected"; comment: string; createdAt: string };
+export type Validation = {
+  decision: "accepted" | "rejected";
+  comment: string;
+  createdAt: string;
+};
 
 export type ProblemSummary = {
   id: string;
   title: string;
   sector: string;
   country: string;
+  status: ProblemStatus;
   createdAt: string;
   author: string | null;
   solutionCount?: number;
+  acceptedCount?: number;
 };
 
 export type Solution = {
@@ -106,14 +124,21 @@ export type ProblemDetail = {
   hardwareConstraint: string;
   languageConstraint: string;
   evaluationCriteria: string;
+  status: ProblemStatus;
   createdAt: string;
   author: string | null;
   isAuthor: boolean;
+  workers: Worker[];
   solutions: Solution[];
   contributions: Contribution[];
 };
 
-export type Discussion = { id: string; body: string; createdAt: string; author: string | null };
+export type Discussion = {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: string | null;
+};
 
 export type SearchResult = {
   problems: (ProblemSummary & {
@@ -147,7 +172,11 @@ export type OrgDetail = {
   name: string;
   description: string;
   myRole: "admin" | "member" | null;
-  members: { username: string | null; name: string; role: "admin" | "member" }[];
+  members: {
+    username: string | null;
+    name: string;
+    role: "admin" | "member";
+  }[];
   repos: {
     ownerSlug: string;
     name: string;
@@ -159,3 +188,59 @@ export type OrgDetail = {
 
 export type Namespaces = { username: string | null; adminOrgs: string[] };
 export type Collaborator = { username: string | null; name: string };
+
+export type Worker = { username: string | null; name: string; note: string; createdAt: string };
+
+export type Suggestion = RepoSummary & {
+  license: License;
+  /** null : contrainte non posée par l'auteur du problème. */
+  fits: { offline: boolean | null; languages: string[] | null };
+};
+
+type RepoRef = { owner: string; name: string };
+export type Dashboard = {
+  repos: RepoSummary[];
+  working: { problemId: string; problemTitle: string; status: ProblemStatus; note: string }[];
+  problems: { id: string; title: string; status: ProblemStatus }[];
+  toReview: {
+    solutions: {
+      id: string;
+      problemId: string;
+      problemTitle: string;
+      submittedBy: string | null;
+      createdAt: string;
+      repo: RepoRef;
+    }[];
+    contributions: {
+      id: string;
+      problemId: string;
+      problemTitle: string;
+      contributor: string | null;
+      createdAt: string;
+    }[];
+    pulls: {
+      number: number;
+      title: string;
+      author: string | null;
+      repo: RepoRef;
+      createdAt: string;
+    }[];
+  };
+  mine: {
+    solutions: {
+      id: string;
+      status: ReviewStatus;
+      problemId: string;
+      problemTitle: string;
+      repo: RepoRef;
+      createdAt: string;
+    }[];
+    contributions: {
+      id: string;
+      status: ReviewStatus;
+      problemId: string;
+      problemTitle: string;
+      createdAt: string;
+    }[];
+  };
+};

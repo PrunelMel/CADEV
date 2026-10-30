@@ -48,6 +48,13 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   return data as T;
 }
 
+/** Lit un fichier de l'API en texte (aperçu dans le navigateur). */
+export async function fetchText(url: string): Promise<string> {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new ApiError(res.status, "error", "Aperçu indisponible");
+  return res.text();
+}
+
 /** Encode chaque segment d'un chemin de fichier en gardant les "/". */
 export const encodePath = (p: string) => p.split("/").map(encodeURIComponent).join("/");
 

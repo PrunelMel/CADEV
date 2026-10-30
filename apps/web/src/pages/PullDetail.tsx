@@ -4,14 +4,15 @@ import { usePull, usePullAction, useUploadPullFile } from "../api/hooks";
 import { Discussions } from "../components/Discussions";
 import { FileUpload } from "../components/FileUpload";
 import { Button, ErrorText, Query, Section, Tag, formatDate, formatSize } from "../components/ui";
-
-const statusText = { open: "Ouverte", merged: "Fusionnée", closed: "Fermée" };
+import { pullStatusLabels } from "../content/site";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 export function PullDetailPage() {
   const { owner = "", name = "", number: raw = "" } = useParams();
   const number = Number(raw);
   const ref = { owner, name };
   const pull = usePull(ref, number);
+  usePageTitle(pull.data ? `#${pull.data.number} ${pull.data.title}` : `${owner}/${name}`);
   const upload = useUploadPullFile(ref, number);
   const action = usePullAction(ref, number);
 
@@ -23,12 +24,12 @@ export function PullDetailPage() {
             <Link to={`/${owner}/${name}?tab=pulls`} className="font-mono text-sm hover:underline">
               {owner}/{name}
             </Link>
-            <h1 className="text-xl font-semibold">
+            <h1 className="text-2xl font-semibold tracking-tight">
               #{p.number} {p.title}
             </h1>
             <p className="flex items-center gap-2 text-xs text-neutral-500">
               <Tag tone={p.status === "merged" ? "green" : p.status === "closed" ? "red" : "amber"}>
-                {statusText[p.status]}
+                {pullStatusLabels[p.status]}
               </Tag>
               par {p.author} le {formatDate(p.createdAt)}, basée sur{" "}
               {p.baseVersion ? `la version ${p.baseVersion}` : "un dépôt vide"}
@@ -39,9 +40,9 @@ export function PullDetailPage() {
 
           <Section title={`Fichiers proposés (${p.files.length})`}>
             {p.files.length > 0 && (
-              <ul className="divide-y divide-neutral-200 text-sm">
+              <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 text-sm">
                 {p.files.map((f) => (
-                  <li key={f.path} className="flex justify-between py-1.5">
+                  <li key={f.path} className="flex justify-between px-3 py-2">
                     <span className="font-mono">
                       {f.path}
                       {p.conflicts.includes(f.path) && (

@@ -2,7 +2,7 @@ import { asc, and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema as t } from "../db/index.js";
 
-export const createDiscussion = z.object({ body: z.string().min(1).max(20_000) });
+export const createDiscussion = z.object({ body: z.string().trim().min(1).max(20_000) });
 type Target = (typeof t.discussionTarget.enumValues)[number];
 
 export function listDiscussions(targetType: Target, targetId: string) {

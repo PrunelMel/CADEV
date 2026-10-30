@@ -81,7 +81,10 @@ export function Hero() {
     let renderer: AfricaRenderer | null = null;
     if (canvas) {
       try {
-        renderer = new AfricaRenderer(canvas, { reducedMotion, onFrame: applyProgress });
+        renderer = new AfricaRenderer(canvas, {
+          reducedMotion,
+          onFrame: applyProgress,
+        });
         setCounts({
           west: countRegion(renderer.markers, "west"),
           south: countRegion(renderer.markers, "south"),
@@ -136,7 +139,7 @@ export function Hero() {
       ref={sectionRef}
       className="hero"
       style={{ height: `${HERO_VH}vh` }}
-      aria-label="Africa's applied AI community"
+      aria-label="Communauté africaine d'IA appliquée"
     >
       <div ref={stageRef} className={`hero__stage${webgl ? "" : " hero__stage--poster"}`}>
         {webgl ? (
@@ -155,6 +158,9 @@ export function Hero() {
             <a className="btn btn--primary" href="#join" onClick={goToJoin}>
               {heroCopy.joinCta}
               <ArrowRight size={16} strokeWidth={2} />
+            </a>
+            <a className="btn btn--ghost" href={heroCopy.exploreHref}>
+              {heroCopy.exploreCta}
             </a>
           </div>
         </div>
@@ -184,6 +190,9 @@ export function Hero() {
             <a className="btn btn--primary" href={heroCopy.joinHref}>
               {heroCopy.joinCta}
               <ArrowRight size={16} strokeWidth={2} />
+            </a>
+            <a className="btn btn--ghost" href={heroCopy.exploreHref}>
+              {heroCopy.exploreCta}
             </a>
           </div>
         </div>
@@ -281,7 +290,7 @@ function Steps() {
         {steps.items.map((it, i) => (
           <li key={it.title} className="steps__copy" style={{ "--i": i } as CSSProperties}>
             <h3 className="steps__title">
-              <span className="sr-only">Step {i + 1}: </span>
+              <span className="sr-only">Étape {i + 1} : </span>
               {it.title}
             </h3>
             <p className="steps__text">{it.text}</p>

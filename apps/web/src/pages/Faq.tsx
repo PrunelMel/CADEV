@@ -1,7 +1,9 @@
+import { usePageTitle } from "../hooks/usePageTitle";
 import { Link } from "react-router";
 import { faq } from "../content/site";
 
 export function FaqPage() {
+  usePageTitle("Questions fréquentes");
   return (
     <div className="max-w-2xl space-y-4">
       <h1 className="text-xl font-semibold">Questions fréquentes</h1>

@@ -120,7 +120,9 @@ export const repositories = pgTable(
     ownerSlug: text("owner_slug").notNull(),
     name: text("name").notNull(),
     ownerUserId: userRef("owner_user_id"),
-    ownerOrgId: uuid("owner_org_id").references(() => organizations.id, { onDelete: "cascade" }),
+    ownerOrgId: uuid("owner_org_id").references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
     visibility: visibility("visibility").notNull().default("public"),
     licenseId: text("license_id")
       .notNull()
@@ -130,6 +132,11 @@ export const repositories = pgTable(
     limitations: text("limitations").notNull().default(""),
     provenanceCommunity: text("provenance_community"),
     provenanceCountry: text("provenance_country"),
+    // Fiche technique : ce qu'il faut savoir pour juger l'adéquation au terrain.
+    task: text("task").notNull().default(""),
+    languages: text("languages").array().notNull().default([]),
+    worksOffline: boolean("works_offline").notNull().default(false),
+    targetHardware: text("target_hardware").notNull().default(""),
     createdBy: userRef("created_by").notNull(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -219,6 +226,8 @@ export const pullRequestFiles = pgTable(
 
 /* ---------- Problèmes, solutions, contributions ---------- */
 
+export const problemStatus = pgEnum("problem_status", ["open", "solved", "closed"]);
+
 export const problems = pgTable("problems", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
@@ -229,9 +238,25 @@ export const problems = pgTable("problems", {
   hardwareConstraint: text("hardware_constraint").notNull().default(""),
   languageConstraint: text("language_constraint").notNull().default(""),
   evaluationCriteria: text("evaluation_criteria").notNull(),
+  status: problemStatus("status").notNull().default("open"),
   authorId: userRef("author_id").notNull(),
   createdAt: createdAt(),
+  updatedAt: updatedAt(),
 });
+
+/** Développeurs qui déclarent travailler sur un problème : évite que deux équipes partent en parallèle sans le savoir. */
+export const problemWorkers = pgTable(
+  "problem_workers",
+  {
+    problemId: uuid("problem_id")
+      .notNull()
+      .references(() => problems.id, { onDelete: "cascade" }),
+    userId: userRef("user_id").notNull(),
+    note: text("note").notNull().default(""),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.problemId, t.userId] })],
+);
 
 export const reviewStatus = pgEnum("review_status", ["pending", "accepted", "rejected"]);
 

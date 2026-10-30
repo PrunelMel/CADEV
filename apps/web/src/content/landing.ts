@@ -1,4 +1,6 @@
-// All static copy and tuning for the landing hero lives here.
+import { site } from "./site";
+
+// Tous les textes et réglages de la landing sont ici.
 // Image: /assets/globe-poster.png (apps/web/public), WebGL fallback poster, from the africa-hero landing source.
 
 /** Total scroll length of the hero, in vh. Every scroll point below is given in vh too. */
@@ -7,24 +9,27 @@ export const HERO_VH = 1320;
 const at = (vh: number) => vh / HERO_VH;
 
 export const heroCopy = {
-  eyebrow: "Live network across Africa",
+  eyebrow: "Une communauté à travers l'Afrique",
   /** Hero lockup: top line, big word on the left, box on the right (top 30%), accent line (rest). */
   title: {
-    full: "The AI Africa needs will be built by us.",
-    top: "The AI Africa",
-    big: "Needs",
-    box: "Will be",
-    accent: "Built by us.",
+    full: "L'IA dont l'Afrique a besoin sera bâtie par nous.",
+    top: "L'IA dont l'Afrique",
+    big: "a besoin",
+    box: "sera",
+    accent: "bâtie par nous.",
   },
-  joinCta: "Join the community",
+  joinCta: "Rejoindre la communauté",
   /** Where the "Join the community" buttons go: the sign-up page. */
   joinHref: "/inscription",
-  scrollHint: "Scroll to explore",
-  statusTitle: "Live status",
-  statusRegionWest: "West Africa",
-  statusRegionSouth: "Southern Africa",
-  onlineLabel: "Online",
-  offlineLabel: "Offline",
+  /** Accès direct à l'application, sans compte. */
+  exploreCta: "Explorer les problèmes",
+  exploreHref: "/accueil",
+  scrollHint: "Faites défiler",
+  statusTitle: "État du réseau",
+  statusRegionWest: "Afrique de l'Ouest",
+  statusRegionSouth: "Afrique australe",
+  onlineLabel: "En ligne",
+  offlineLabel: "Hors ligne",
 };
 
 export const mapConfig = {
@@ -103,43 +108,43 @@ export interface StorySection {
 export const sections: StorySection[] = [
   {
     id: "sovereignty",
-    label: "Sovereignty",
+    label: "Souveraineté",
     title: {
       style: "block",
-      lines: [{ text: "What we build", block: true }, { text: "stays ours." }],
+      lines: [{ text: "Ce que nous bâtissons", block: true }, { text: "reste à nous." }],
     },
-    titleText: "What we build stays ours.",
-    text: "Our data, our communities, our solutions. We believe developers and the communities they serve should decide how their work is used, and benefit from it. No silent extraction, no hidden rights. Openness on our own terms.",
+    titleText: "Ce que nous bâtissons reste à nous.",
+    text: "Nos données, nos communautés, nos solutions. Les développeurs et les communautés qu'ils servent décident de l'usage de leur travail, et en tirent profit. Aucune extraction silencieuse, aucun droit caché. L'ouverture, à nos conditions.",
     placement: "left",
     show: [at(65), at(145)],
   },
   {
     id: "everyone",
-    label: "Everyone has a part",
+    label: "Chacun a sa place",
     title: {
       style: "center",
-      kicker: "You don’t need to train a model",
-      main: "To move AI forward",
+      kicker: "Pas besoin d’entraîner un modèle",
+      main: "Pour faire avancer l’IA",
     },
-    titleText: "You don’t need to train a model to move AI forward.",
-    text: "The data collected in the field, the problem described clearly, the review of someone else’s solution. Every contribution builds the foundation. The community is only as strong as everyone who shows up.",
+    titleText: "Pas besoin d’entraîner un modèle pour faire avancer l’IA.",
+    text: "Les données collectées sur le terrain, un problème clairement décrit, l’avis sur la solution d’un autre. Chaque contribution pose une pierre. La communauté vaut ce que vaut chacun de ceux qui s’impliquent.",
     placement: "top",
     show: [at(343), at(475)],
   },
   {
     id: "join",
-    label: "Join us",
+    label: "Nous rejoindre",
     title: {
       style: "block",
       lines: [
-        { text: "The next breakthrough" },
-        { text: "won’t come from far away." },
-        { text: "It’ll come from us.", block: true },
+        { text: "La prochaine avancée" },
+        { text: "ne viendra pas de loin." },
+        { text: "Elle viendra de nous.", block: true },
       ],
     },
-    titleText: "The next breakthrough won’t come from far away. It’ll come from us.",
-    text: "Join the developers building Africa’s applied AI, together, one real problem at a time.",
-    cta: "Join the community",
+    titleText: "La prochaine avancée ne viendra pas de loin. Elle viendra de nous.",
+    text: "Rejoignez les développeurs qui bâtissent l’IA appliquée de l’Afrique, ensemble, un vrai problème à la fois.",
+    cta: "Rejoindre la communauté",
     placement: "left",
     show: [at(563), at(704)],
   },
@@ -160,18 +165,18 @@ export const steps = {
   items: [
     {
       at: at(847),
-      title: "Problems before models",
-      text: "We start from what’s broken in the field, not from what’s trending. Every model, dataset and line of code is tied to a real need, a real place and the people waiting for it.",
+      title: "Les problèmes avant les modèles",
+      text: "Nous partons de ce qui ne marche pas sur le terrain, pas de ce qui est à la mode. Chaque modèle, chaque dataset, chaque ligne de code est rattaché à un vrai besoin, un vrai lieu et aux personnes qui l’attendent.",
     },
     {
       at: at(935),
-      title: "By developers, for developers",
-      text: "No gatekeepers, just builders lifting builders. We share what worked and what failed, so no one starts from zero and everyone is known for the problems they’ve solved.",
+      title: "Par les développeurs, pour les développeurs",
+      text: "Pas de gardiens du temple, des bâtisseurs qui en font grandir d’autres. Nous partageons ce qui a marché et ce qui a échoué : personne ne repart de zéro, et chacun est reconnu pour les problèmes qu’il a résolus.",
     },
     {
       at: at(1012),
-      title: "What we build stays ours",
-      text: "Our data, our communities, our solutions. Developers and the communities they serve decide how their work is used, and they’re the ones who benefit from it.",
+      title: "Ce que nous bâtissons reste à nous",
+      text: "Nos données, nos communautés, nos solutions. Les développeurs et les communautés qu’ils servent décident de l’usage de leur travail, et c’est à eux qu’il profite.",
     },
   ],
 };
@@ -184,41 +189,39 @@ export const statusSwitch = at(782);
 /** Closing, beside the globe: the hero title comes back with the join button. */
 export const closing = {
   show: [at(1230), at(4000)] as [number, number],
-  label: "Join us",
-  text: "Join the developers building Africa’s applied AI, together, one real problem at a time.",
+  label: "Nous rejoindre",
+  text: "Rejoignez les développeurs qui bâtissent l’IA appliquée de l’Afrique, ensemble, un vrai problème à la fois.",
 };
 
-/**
- * Footer. PLACEHOLDERS: replace the name, tagline, links and social accounts
- * with the real ones. `logo` is a path in /public, or null to use the dot mark.
- */
+/** Pied de page : liens vers l'application. Le nom vient de site.ts. `logo` : chemin dans /public, ou null. */
 export const footer = {
-  name: "Community Name",
+  name: site.name,
   logo: null as string | null,
-  tagline: "Applied AI for Africa, by developers, for developers.",
+  tagline: "L'IA appliquée pour l'Afrique, par les développeurs, pour les développeurs.",
   columns: [
-    { title: "Platform", links: [{ label: "Challenges", href: "#" }] },
     {
-      title: "Community",
+      title: "Plateforme",
       links: [
-        { label: "Join the community", href: "#" },
-        { label: "Events", href: "#" },
-        { label: "Contributors", href: "#" },
+        { label: "Problèmes", href: "/problemes" },
+        { label: "Hub de solutions", href: "/hub" },
+        { label: "Recherche", href: "/accueil" },
       ],
     },
     {
-      title: "About",
+      title: "Communauté",
       links: [
-        { label: "Our principles", href: "#" },
-        { label: "Contact", href: "#" },
+        { label: "Rejoindre la communauté", href: "/inscription" },
+        { label: "Publier un problème", href: "/problemes/nouveau" },
+        { label: "Connexion", href: "/connexion" },
+      ],
+    },
+    {
+      title: "À propos",
+      links: [
+        { label: "Questions fréquentes", href: "/faq" },
+        { label: "Souveraineté des données", href: "/faq" },
       ],
     },
   ],
-  socials: [
-    { label: "GitHub", href: "#" },
-    { label: "LinkedIn", href: "#" },
-    { label: "X", href: "#" },
-    { label: "Discord", href: "#" },
-  ],
-  legal: "© 2026 Community Name. All rights reserved.",
+  legal: `© 2026 ${site.name}. Projet présenté à la Coupe CAdev 2026.`,
 };

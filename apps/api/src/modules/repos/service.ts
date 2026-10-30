@@ -1,5 +1,5 @@
 import type { Readable } from "node:stream";
-import { and, asc, count, desc, eq, ilike, max, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, max, or, sql } from "drizzle-orm";
 import { db, schema as t } from "../../db/index.js";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/errors.js";
 import { orgMembership, repoAccess } from "../../lib/permissions.js";
@@ -9,7 +9,12 @@ import { findOrg, userByUsername } from "../orgs/service.js";
 import type { CreatePull, CreateRepo, ListQuery, UpdateRepo } from "./schemas.js";
 
 type SessionUser = { id: string; username: string | null };
-type FileRow = { path: string; size: number; sha256: string; storageKey: string };
+type FileRow = {
+  path: string;
+  size: number;
+  sha256: string;
+  storageKey: string;
+};
 
 /** Taille annoncée par le client, si présente. */
 const contentLength = (body: Readable & { headers?: Record<string, unknown> }) => {
@@ -17,7 +22,11 @@ const contentLength = (body: Readable & { headers?: Record<string, unknown> }) =
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 };
 
-const publicFile = ({ path, size, sha256 }: FileRow) => ({ path, size, sha256 });
+const publicFile = ({ path, size, sha256 }: FileRow) => ({
+  path,
+  size,
+  sha256,
+});
 
 /* ---------- Lecture et droits ---------- */
 
@@ -107,7 +116,12 @@ function commit(
 
     const [version] = await tx
       .insert(t.repositoryVersions)
-      .values({ repoId, number: (latest?.number ?? 0) + 1, message, createdBy: userId })
+      .values({
+        repoId,
+        number: (latest?.number ?? 0) + 1,
+        message,
+        createdBy: userId,
+      })
       .returning();
     if (files.size) {
       await tx
@@ -129,20 +143,44 @@ export async function listRepos(query: ListQuery) {
   if (query.type) filters.push(eq(t.repositories.type, query.type));
   if (query.q) {
     const like = `%${query.q}%`;
-    const match = or(ilike(t.repositories.name, like), ilike(t.repositories.description, like));
+    const match = or(
+      ilike(t.repositories.name, like),
+      ilike(t.repositories.description, like),
+      ilike(t.repositories.task, like),
+    );
     if (match) filters.push(match);
   }
+  if (query.offline) filters.push(eq(t.repositories.worksOffline, true));
+  if (query.language) {
+    // Comparaison insensible à la casse sur le tableau des langues.
+    filters.push(
+      sql`exists (select 1 from unnest(${t.repositories.languages}) l where lower(l) = lower(${query.language}))`,
+    );
+  }
   const rows = await db
-    .select({ repo: t.repositories, license: t.licenses })
+    .select({ repo: t.repositories, license: t.licenses, likes: likesOf })
     .from(t.repositories)
     .innerJoin(t.licenses, eq(t.licenses.id, t.repositories.licenseId))
     .where(and(...filters))
     .orderBy(desc(t.repositories.updatedAt))
     .limit(100);
-  return rows.map(({ repo, license }) => ({
+  return rows.map(({ repo, license, likes }) => ({
     ...summary(repo),
+    likes,
     license: withRestrictions(license),
   }));
+}
+
+/** Nombre de likes d'un dépôt, en sous-requête. */
+export const likesOf = sql<number>`(select count(*)::int from ${t.likes} where ${t.likes.repoId} = ${t.repositories.id})`;
+
+/** Langues déjà déclarées sur les dépôts publics, pour les filtres du hub. */
+export async function knownLanguages() {
+  const rows = await db.execute<{ language: string }>(
+    sql`select distinct l as language from ${t.repositories}, unnest(${t.repositories.languages}) l
+        where ${t.repositories.visibility} = 'public' order by 1`,
+  );
+  return rows.rows.map((r) => r.language);
 }
 
 export function summary(repo: typeof t.repositories.$inferSelect) {
@@ -155,6 +193,11 @@ export function summary(repo: typeof t.repositories.$inferSelect) {
     description: repo.description,
     provenanceCommunity: repo.provenanceCommunity,
     provenanceCountry: repo.provenanceCountry,
+    ownerKind: repo.ownerOrgId ? ("org" as const) : ("user" as const),
+    task: repo.task,
+    languages: repo.languages,
+    worksOffline: repo.worksOffline,
+    targetHardware: repo.targetHardware,
     updatedAt: repo.updatedAt,
   };
 }
@@ -163,20 +206,34 @@ export async function createRepo(input: CreateRepo, user: SessionUser) {
   const { org: orgSlug, ...data } = input;
   await getLicense(data.licenseId);
 
-  let owner: { ownerSlug: string; ownerUserId: string | null; ownerOrgId: string | null };
+  let owner: {
+    ownerSlug: string;
+    ownerUserId: string | null;
+    ownerOrgId: string | null;
+  };
   if (orgSlug) {
     const org = await findOrg(orgSlug);
     if ((await orgMembership(org.id, user.id)) !== "admin") throw forbidden();
     owner = { ownerSlug: org.slug, ownerUserId: null, ownerOrgId: org.id };
   } else {
     if (!user.username) throw badRequest("Choisissez d'abord un nom d'utilisateur");
-    owner = { ownerSlug: user.username, ownerUserId: user.id, ownerOrgId: null };
+    owner = {
+      ownerSlug: user.username,
+      ownerUserId: user.id,
+      ownerOrgId: null,
+    };
   }
 
   const [existing] = await db
     .select({ id: t.repositories.id })
     .from(t.repositories)
-    .where(and(eq(t.repositories.ownerSlug, owner.ownerSlug), eq(t.repositories.name, data.name)));
+    .where(
+      and(
+        eq(t.repositories.ownerSlug, owner.ownerSlug),
+        sql`lower(${t.repositories.name}) = lower(${data.name})`,
+      ),
+    );
+  // « Manioc » et « manioc » donneraient deux adresses presque identiques.
   if (existing) throw conflict("Un dépôt porte déjà ce nom");
 
   const [repo] = await db
@@ -209,7 +266,11 @@ export async function repoDetail(
       ).length > 0
     : false;
   const solves = await db
-    .select({ id: t.problems.id, title: t.problems.title, status: t.solutions.status })
+    .select({
+      id: t.problems.id,
+      title: t.problems.title,
+      status: t.solutions.status,
+    })
     .from(t.solutions)
     .innerJoin(t.problems, eq(t.problems.id, t.solutions.problemId))
     .where(eq(t.solutions.repoId, repo.id));
@@ -264,6 +325,9 @@ export async function addCollaborator(
 ) {
   const { repo } = await findOwned(owner, name, userId);
   const collaborator = await userByUsername(username);
+  if (collaborator.id === repo.ownerUserId) {
+    throw badRequest("Le propriétaire a déjà tous les droits sur ce dépôt");
+  }
   await db
     .insert(t.repositoryCollaborators)
     .values({ repoId: repo.id, userId: collaborator.id })
@@ -304,7 +368,10 @@ export async function uploadFile(
   const version = await commit(repo.id, userId, message || `Ajout de ${path}`, (files) =>
     files.set(path, { path, ...stored }),
   );
-  return { version: version.number, file: { path, size: stored.size, sha256: stored.sha256 } };
+  return {
+    version: version.number,
+    file: { path, size: stored.size, sha256: stored.sha256 },
+  };
 }
 
 export async function deleteFile(
@@ -513,7 +580,11 @@ export async function mergePull(owner: string, name: string, number: number, use
   });
   await db
     .update(t.pullRequests)
-    .set({ status: "merged", mergedVersionId: version.id, updatedAt: new Date() })
+    .set({
+      status: "merged",
+      mergedVersionId: version.id,
+      updatedAt: new Date(),
+    })
     .where(eq(t.pullRequests.id, pull.id));
   return { version: version.number };
 }

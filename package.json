@@ -16,7 +16,9 @@
     "typecheck": "npm run typecheck -w apps/api && npm run typecheck -w apps/web",
     "db:generate": "npm run db:generate -w apps/api",
     "db:migrate": "npm run db:migrate -w apps/api",
-    "db:seed": "npm run db:seed -w apps/api"
+    "db:seed": "npm run db:seed -w apps/api",
+    "db:demo": "npm run db:demo -w apps/api",
+    "test": "npm run test -w apps/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

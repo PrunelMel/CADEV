@@ -49,10 +49,12 @@ export async function createContribution(
   userId: string,
 ) {
   const [problem] = await db
-    .select({ id: t.problems.id })
+    .select({ id: t.problems.id, status: t.problems.status })
     .from(t.problems)
     .where(eq(t.problems.id, problemId));
   if (!problem) throw notFound("Problème");
+  if (problem.status === "closed")
+    throw badRequest("Ce problème est fermé aux nouvelles propositions");
 
   let datasetRepoId: string | null = null;
   if (input.dataset) {
