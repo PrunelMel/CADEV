@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, encodePath } from "./client";
+import { api, encodePath, fetchText } from "./client";
 import type {
   Collaborator,
+  Dashboard,
   Discussion,
   License,
   Namespaces,
   OrgDetail,
   ProblemDetail,
+  ProblemStatus,
   ProblemSummary,
   Profile,
   PullDetail,
@@ -15,8 +17,11 @@ import type {
   RepoSummary,
   RepoType,
   SearchResult,
+  Suggestion,
   Version,
+  Worker,
 } from "./types";
+import type { CountryCount } from "../components/AfricaMap";
 
 type Ref = { owner: string; name: string };
 const repoPath = ({ owner, name }: Ref) => `/repos/${owner}/${name}`;
@@ -26,7 +31,11 @@ function useMutate<I, O>(fn: (input: I) => Promise<O>, prefix: unknown[]) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => qc.invalidateQueries({ queryKey: prefix }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: prefix });
+      // Le tableau de bord agrège tout : il est rafraîchi après chaque mutation.
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }
 
@@ -47,15 +56,32 @@ export const useSearch = (q: string) =>
   });
 
 export const useProfile = (username: string) =>
-  useQuery({ queryKey: ["users", username], queryFn: () => api<Profile>(`/users/${username}`) });
+  useQuery({
+    queryKey: ["users", username],
+    queryFn: () => api<Profile>(`/users/${username}`),
+  });
+
+export const useDashboard = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["dashboard"],
+    queryFn: () => api<Dashboard>("/me/dashboard"),
+    enabled,
+  });
 
 export const useNamespaces = (enabled: boolean) =>
-  useQuery({ queryKey: ["namespaces"], queryFn: () => api<Namespaces>("/me/namespaces"), enabled });
+  useQuery({
+    queryKey: ["namespaces"],
+    queryFn: () => api<Namespaces>("/me/namespaces"),
+    enabled,
+  });
 
 /* Organisations */
 
 export const useOrg = (slug: string) =>
-  useQuery({ queryKey: ["orgs", slug], queryFn: () => api<OrgDetail>(`/orgs/${slug}`) });
+  useQuery({
+    queryKey: ["orgs", slug],
+    queryFn: () => api<OrgDetail>(`/orgs/${slug}`),
+  });
 
 export const useCreateOrg = () =>
   useMutate(
@@ -79,10 +105,26 @@ export const useRemoveOrgMember = (slug: string) =>
 
 /* Dépôts */
 
-export const useRepos = (filters: { type?: RepoType; q?: string }) =>
+export type RepoFilters = {
+  type?: RepoType;
+  q?: string;
+  offline?: boolean;
+  language?: string;
+};
+
+export const useRepos = (filters: RepoFilters) =>
   useQuery({
     queryKey: ["repos", "list", filters],
-    queryFn: () => api<RepoSummary[]>("/repos", { query: filters }),
+    queryFn: () =>
+      api<RepoSummary[]>("/repos", {
+        query: { ...filters, offline: filters.offline ? "true" : undefined },
+      }),
+  });
+
+export const useLanguages = () =>
+  useQuery({
+    queryKey: ["languages"],
+    queryFn: () => api<string[]>("/languages"),
   });
 
 export const useRepo = (ref: Ref, version?: number) =>
@@ -102,6 +144,10 @@ export type RepoInput = {
   limitations: string;
   provenanceCommunity: string | null;
   provenanceCountry: string | null;
+  task: string;
+  languages: string[];
+  worksOffline: boolean;
+  targetHardware: string;
 };
 
 export const useCreateRepo = () =>
@@ -201,14 +247,24 @@ export const usePullAction = (ref: Ref, number: number) =>
 
 /* Problèmes, solutions, contributions */
 
-export const useProblems = (filters: { sector?: string; country?: string }) =>
+export type ProblemFilters = {
+  sector?: string;
+  country?: string;
+  status?: ProblemStatus | "";
+  q?: string;
+};
+
+export const useProblems = (filters: ProblemFilters) =>
   useQuery({
     queryKey: ["problems", "list", filters],
     queryFn: () => api<ProblemSummary[]>("/problems", { query: filters }),
   });
 
 export const useProblem = (id: string) =>
-  useQuery({ queryKey: ["problems", id], queryFn: () => api<ProblemDetail>(`/problems/${id}`) });
+  useQuery({
+    queryKey: ["problems", id],
+    queryFn: () => api<ProblemDetail>(`/problems/${id}`),
+  });
 
 export type ProblemInput = {
   title: string;
@@ -220,6 +276,45 @@ export type ProblemInput = {
   languageConstraint: string;
   evaluationCriteria: string;
 };
+
+export const useCountryCounts = () =>
+  useQuery({
+    queryKey: ["problems", "countries"],
+    queryFn: () => api<CountryCount[]>("/problem-countries"),
+  });
+
+/** Déclarer (note) ou retirer (null) son travail en cours sur un problème. */
+export const useWork = (id: string) =>
+  useMutate(
+    (note: string | null) =>
+      api<Worker[]>(`/problems/${id}/work`, {
+        method: note === null ? "DELETE" : "PUT",
+        json: note === null ? undefined : { note },
+      }),
+    ["problems", id],
+  );
+
+/** Contenu texte d'un fichier, pour l'aperçu. Limité côté appelant aux petits fichiers. */
+export const useFileText = (url: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ["file-text", url],
+    queryFn: () => fetchText(url),
+    enabled,
+    staleTime: Infinity,
+  });
+
+export const useSuggestions = (id: string) =>
+  useQuery({
+    queryKey: ["problems", id, "suggestions"],
+    queryFn: () => api<Suggestion[]>(`/problems/${id}/suggestions`),
+  });
+
+export const useUpdateProblem = (id: string) =>
+  useMutate(
+    (input: Partial<ProblemInput & { status: ProblemStatus }>) =>
+      api<{ id: string }>(`/problems/${id}`, { method: "PATCH", json: input }),
+    ["problems"],
+  );
 
 export const useCreateProblem = () =>
   useMutate(

@@ -11,6 +11,10 @@ const meta = {
   limitations: z.string().max(20_000),
   provenanceCommunity: z.string().max(200).nullable(),
   provenanceCountry: z.string().max(100).nullable(),
+  task: z.string().max(200),
+  languages: z.array(z.string().trim().min(1).max(50)).max(20),
+  worksOffline: z.boolean(),
+  targetHardware: z.string().max(300),
 };
 
 export const createRepo = z.object({
@@ -24,6 +28,10 @@ export const createRepo = z.object({
   limitations: meta.limitations.default(""),
   provenanceCommunity: meta.provenanceCommunity.default(null),
   provenanceCountry: meta.provenanceCountry.default(null),
+  task: meta.task.default(""),
+  languages: meta.languages.default([]),
+  worksOffline: meta.worksOffline.default(false),
+  targetHardware: meta.targetHardware.default(""),
 });
 export type CreateRepo = z.infer<typeof createRepo>;
 
@@ -33,17 +41,29 @@ export type UpdateRepo = z.infer<typeof updateRepo>;
 export const listQuery = z.object({
   type: repoType.optional(),
   q: z.string().max(200).optional(),
+  /** "true" pour ne garder que les ressources utilisables sans connexion. */
+  offline: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
+  language: z.string().trim().max(50).optional(),
 });
 export type ListQuery = z.infer<typeof listQuery>;
 
 export const repoParams = z.object({ owner: z.string(), name: z.string() });
 export const fileParams = repoParams.extend({ path: filePath });
 export const collaboratorParams = repoParams.extend({ username: z.string() });
-export const pullParams = repoParams.extend({ number: z.coerce.number().int().positive() });
+export const pullParams = repoParams.extend({
+  number: z.coerce.number().int().positive(),
+});
 export const pullFileParams = pullParams.extend({ path: filePath });
 
-export const versionQuery = z.object({ version: z.coerce.number().int().positive().optional() });
-export const commitQuery = z.object({ message: z.string().max(500).default("") });
+export const versionQuery = z.object({
+  version: z.coerce.number().int().positive().optional(),
+});
+export const commitQuery = z.object({
+  message: z.string().max(500).default(""),
+});
 
 export const addCollaborator = z.object({ username: z.string().min(1) });
 

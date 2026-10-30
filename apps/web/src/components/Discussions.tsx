@@ -23,16 +23,17 @@ export function Discussions({ path }: { path: string }) {
           items.length ? (
             <ul className="space-y-3">
               {items.map((d) => (
-                <li key={d.id} className="border-l-2 border-neutral-200 pl-3 text-sm">
-                  <p className="text-xs text-neutral-500">
-                    {d.author} · {formatDate(d.createdAt)}
+                <li key={d.id} className="rounded-lg border border-neutral-200 p-3 text-sm">
+                  <p className="mb-1 text-xs text-neutral-500">
+                    <span className="font-medium text-ink">{d.author}</span> ·{" "}
+                    {formatDate(d.createdAt)}
                   </p>
                   <p className="whitespace-pre-wrap">{d.body}</p>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-neutral-500">Aucun message.</p>
+            <p className="text-sm text-neutral-500">Aucun message. Posez la première question.</p>
           )
         }
       </Query>

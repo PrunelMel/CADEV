@@ -21,9 +21,17 @@ export function FileUpload({ onUpload, pending, error, withMessage = true }: Pro
     onUpload({ path, file, message: String(data.get("message") ?? "") }, () => form.reset());
   }
   return (
-    <form onSubmit={submit} className="grid gap-3 border border-neutral-200 p-3 sm:grid-cols-2">
+    <form
+      onSubmit={submit}
+      className="grid gap-3 rounded-lg border border-dashed border-neutral-300 bg-paper p-4 sm:grid-cols-2"
+    >
       <Field label="Fichier">
-        <input type="file" name="file" required className="text-sm" />
+        <input
+          type="file"
+          name="file"
+          required
+          className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-ink file:px-3 file:py-1.5 file:text-sm file:text-white"
+        />
       </Field>
       <Field label="Chemin dans le dépôt" hint="Facultatif, par exemple weights/model.onnx">
         <Input name="path" />

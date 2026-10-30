@@ -1,5 +1,74 @@
 @import "tailwindcss";
 
+/* Identité de l'application, reprise de la landing : encre marine, accent violet, Geist. */
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-display: "Bebas Neue", "Oswald", Impact, sans-serif;
+  --color-night: #080c18;
+  --color-night-line: #1d2538;
+  --color-lilac: #a397f7;
+  --color-signal: #45e085;
+  --color-ink: #0b1020;
+  --color-ink-soft: #1c2438;
+  --color-accent: #5847d1;
+  --color-accent-soft: #eeebff;
+  --color-paper: #f7f8fa;
+}
+
 body {
-  @apply bg-white text-neutral-900 antialiased;
+  @apply bg-white text-ink antialiased;
+  /* Les bandeaux pleine largeur (100vw) ne doivent pas créer de défilement horizontal. */
+  overflow-x: clip;
+}
+
+/* Rendu des fiches Markdown, sans plugin de typographie. */
+.prose-md {
+  @apply text-sm leading-relaxed text-ink-soft;
+}
+.prose-md > * + * {
+  @apply mt-3;
+}
+.prose-md h1 {
+  @apply text-xl font-semibold text-ink;
+}
+.prose-md h2 {
+  @apply mt-6 border-b border-neutral-200 pb-1 text-base font-semibold text-ink;
+}
+.prose-md h3 {
+  @apply mt-4 font-semibold text-ink;
+}
+.prose-md a {
+  @apply text-accent underline underline-offset-2;
+}
+.prose-md ul {
+  @apply list-disc space-y-1 pl-5;
+}
+.prose-md ol {
+  @apply list-decimal space-y-1 pl-5;
+}
+.prose-md code {
+  @apply rounded bg-paper px-1 py-0.5 font-mono text-[0.85em];
+}
+.prose-md pre {
+  @apply overflow-x-auto rounded-md border border-neutral-200 bg-paper p-3;
+}
+.prose-md pre code {
+  @apply bg-transparent p-0;
+}
+.prose-md blockquote {
+  @apply border-l-2 border-neutral-300 pl-3 text-neutral-600;
+}
+.prose-md table {
+  @apply w-full border-collapse text-left;
+}
+.prose-md th,
+.prose-md td {
+  @apply border border-neutral-200 px-2 py-1;
+}
+.prose-md th {
+  @apply bg-paper font-medium;
+}
+.prose-md img {
+  @apply max-w-full;
 }

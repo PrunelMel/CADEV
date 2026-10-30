@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Trash2 } from "lucide-react";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { useAddOrgMember, useCreateOrg, useOrg, useRemoveOrgMember } from "../api/hooks";
 import { RepoLink } from "../components/Lists";
 import {
@@ -18,6 +19,7 @@ import {
 import { repoTypeLabels } from "../content/site";
 
 export function OrgNewPage() {
+  usePageTitle("Nouvelle organisation");
   const create = useCreateOrg();
   const navigate = useNavigate();
   function submit(e: FormEvent<HTMLFormElement>) {
@@ -30,7 +32,7 @@ export function OrgNewPage() {
   }
   return (
     <form onSubmit={submit} className="max-w-md space-y-4">
-      <h1 className="text-xl font-semibold">Nouvelle organisation</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Nouvelle organisation</h1>
       <Field
         label="Identifiant"
         hint="Minuscules, chiffres et tirets. Apparaît dans l'adresse des dépôts."
@@ -52,6 +54,7 @@ export function OrgNewPage() {
 export function OrgDetailPage() {
   const { slug = "" } = useParams();
   const org = useOrg(slug);
+  usePageTitle(org.data?.name ?? slug);
   const add = useAddOrgMember(slug);
   const remove = useRemoveOrgMember(slug);
 
@@ -70,8 +73,8 @@ export function OrgDetailPage() {
       {(o) => (
         <div className="space-y-6">
           <div>
-            <h1 className="text-xl font-semibold">{o.name}</h1>
-            <p className="font-mono text-sm text-neutral-500">{o.slug}</p>
+            <h1 className="text-2xl font-semibold tracking-tight">{o.name}</h1>
+            <p className="font-mono text-sm text-neutral-500">@{o.slug}</p>
             {o.description && <p className="mt-1">{o.description}</p>}
           </div>
 

@@ -27,6 +27,10 @@ reposRouter.get("/repos", async (req, res) => {
   res.json(await service.listRepos(parse(listQuery, req.query)));
 });
 
+reposRouter.get("/languages", async (_req, res) => {
+  res.json(await service.knownLanguages());
+});
+
 reposRouter.post("/repos", async (req, res) => {
   const user = requireUser(req);
   res.status(201).json(await service.createRepo(parse(createRepo, req.body), user));

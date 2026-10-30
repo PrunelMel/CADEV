@@ -1,6 +1,8 @@
 // Contenu statique de l'interface. Pas d'image pour l'instant : toute photo ajoutée ici
 // doit être une vraie photographie libre de droits, avec sa source et sa licence en commentaire.
 
+import { africanCountries } from "./countries";
+
 export const site = {
   name: "Plateforme IA appliquée",
   tagline: "Une plateforme d'échange pour les développeurs, par les développeurs.",
@@ -59,62 +61,7 @@ export const sectors = [
   "Langues et traduction",
 ];
 
-export const countries = [
-  "Afrique du Sud",
-  "Algérie",
-  "Angola",
-  "Bénin",
-  "Botswana",
-  "Burkina Faso",
-  "Burundi",
-  "Cabo Verde",
-  "Cameroun",
-  "Centrafrique",
-  "Comores",
-  "Congo",
-  "Côte d'Ivoire",
-  "Djibouti",
-  "Égypte",
-  "Érythrée",
-  "Eswatini",
-  "Éthiopie",
-  "Gabon",
-  "Gambie",
-  "Ghana",
-  "Guinée",
-  "Guinée équatoriale",
-  "Guinée-Bissau",
-  "Kenya",
-  "Lesotho",
-  "Liberia",
-  "Libye",
-  "Madagascar",
-  "Malawi",
-  "Mali",
-  "Maroc",
-  "Maurice",
-  "Mauritanie",
-  "Mozambique",
-  "Namibie",
-  "Niger",
-  "Nigeria",
-  "Ouganda",
-  "RD Congo",
-  "Rwanda",
-  "Sao Tomé-et-Principe",
-  "Sénégal",
-  "Seychelles",
-  "Sierra Leone",
-  "Somalie",
-  "Soudan",
-  "Soudan du Sud",
-  "Tanzanie",
-  "Tchad",
-  "Togo",
-  "Tunisie",
-  "Zambie",
-  "Zimbabwe",
-];
+export const countries: string[] = africanCountries.map((c) => c.name);
 
 export const repoTypeLabels = {
   model: "Modèle",
@@ -126,4 +73,16 @@ export const statusLabels = {
   pending: "En attente",
   accepted: "Acceptée",
   rejected: "Rejetée",
+} as const;
+
+export const problemStatusLabels = {
+  open: "Ouvert",
+  solved: "Résolu",
+  closed: "Fermé",
+} as const;
+
+export const pullStatusLabels = {
+  open: "Ouverte",
+  merged: "Fusionnée",
+  closed: "Fermée",
 } as const;

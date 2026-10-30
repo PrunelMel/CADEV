@@ -28,6 +28,13 @@ Si tu identifies une fonctionnalité qui donnerait une touche propre au projet (
 | Validation            | L'auteur du problème seul valide ou rejette solutions et contributions                                                                                                      |
 | Contenu statique      | Fichiers de données dans `apps/web/src/content/`                                                                                                                            |
 | SDK Python            | Reporté, `sdk/` reste vide                                                                                                                                                  |
+| Statut des problèmes  | Ouvert, résolu ou fermé, modifiable par l'auteur seul. Un problème fermé refuse les nouvelles solutions et contributions                                                    |
+| Fiche technique       | Chaque dépôt déclare tâche, langues, fonctionnement hors ligne et matériel cible ; le hub filtre dessus et la page d'un problème suggère les dépôts compatibles             |
+| Tableau de bord       | `/tableau-de-bord` : décisions en attente (solutions, contributions, PR), suivi de ses propositions, tous ses dépôts privés compris                                         |
+| Fiches Markdown       | Rendues avec `react-markdown` + `remark-gfm`, HTML brut ignoré                                                                                                              |
+| Travaux en cours      | Un membre se déclare sur un problème (« Je travaille dessus », avec une note). Évite le travail en double, refusé sur un problème fermé                                     |
+| Carte des problèmes   | Carte de l'Afrique en points, générée depuis les contours Natural Earth de la landing ; un cercle par pays ayant des problèmes, clic vers la liste filtrée (`?pays=`)       |
+| Données de démo       | `npm run db:demo`, comptes et contenus réalistes pour la présentation                                                                                                       |
 
 ## Périmètre MVP
 
@@ -76,9 +83,11 @@ npm run format
 npm run db:generate  # après modification du schéma Drizzle
 npm run db:migrate
 npm run db:seed      # catalogue de licences
+npm run db:demo      # données de démonstration
+npm test             # tests de bout en bout de l'API (API lancée)
 ```
 
-Avant de considérer une tâche terminée : `npm run lint` et `npm run typecheck` passent sans erreur.
+Avant de considérer une tâche terminée : `npm run lint`, `npm run typecheck` et `npm test` passent sans erreur.
 
 ## Conventions de code
 
