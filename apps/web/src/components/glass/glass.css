@@ -1,0 +1,668 @@
+/*
+ * Charte « Liquid Glass » : page « Publier un problème » et en-tête de toutes les pages.
+ * .pp-theme porte les jetons (couleurs, polices) ; .pp-root le fond sombre de la page.
+ * Hors couches Tailwind, comme dans la maquette : ces règles l'emportent sur les utilitaires.
+ */
+.pp-theme {
+  --bg: #070a11;
+  --ink: #e9eaef;
+  --ink2: #a4aaba;
+  --ink3: #6f7686;
+  --hair: rgba(255, 255, 255, 0.08);
+  --line: rgba(255, 255, 255, 0.09);
+  --accent: #a29af0;
+  --accent2: #c0baf8;
+  --accent-text: #b9b2f8;
+  --on-accent: #0a0d16;
+  --accent-soft: rgba(162, 154, 240, 0.14);
+  --accent-soft2: rgba(162, 154, 240, 0.26);
+  --accent-ring: rgba(162, 154, 240, 0.22);
+  --glass: rgba(13, 18, 31, 0.58);
+  --glass2: rgba(14, 19, 33, 0.86);
+  --glass-soft: rgba(255, 255, 255, 0.035);
+  --rim: rgba(255, 255, 255, 0.17);
+  --rim-dim: rgba(255, 255, 255, 0.05);
+  --sheen: rgba(176, 170, 255, 0.22);
+  --shade: rgba(0, 0, 0, 0.62);
+  --shade2: rgba(0, 0, 0, 0.4);
+  --chip: rgba(255, 255, 255, 0.06);
+  --field: rgba(255, 255, 255, 0.035);
+  --field-hi: rgba(255, 255, 255, 0.06);
+  --field-line: rgba(255, 255, 255, 0.1);
+  --scrim: rgba(3, 5, 10, 0.66);
+  --ok: #4ade80;
+  --danger: #f87171;
+  --dot: rgba(150, 160, 186, 0.38);
+  --dot-hover: rgba(214, 219, 236, 0.85);
+  --dot-sel: #d3cfff;
+  --map-off: rgba(150, 160, 186, 0.13);
+  --b1: rgba(66, 82, 196, 0.22);
+  --b2: rgba(58, 78, 170, 0.2);
+  --b3: rgba(110, 96, 224, 0.11);
+  --b4: rgba(48, 68, 160, 0.2);
+  --b5: rgba(74, 222, 128, 0.035);
+  --grain: 0.035;
+  --font-display: "Bebas Neue", "Oswald", "Arial Narrow", Impact, sans-serif;
+  --font-wide: "Montserrat Variable", "Montserrat", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-body:
+    "Hanken Grotesk Variable", "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.pp-root {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--bg);
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: 16px;
+}
+.pp-theme * {
+  -webkit-tap-highlight-color: transparent;
+}
+.pp-theme ::selection {
+  background: var(--accent-soft2);
+}
+.pp-theme :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.pp-theme input:focus-visible,
+.pp-theme textarea:focus-visible {
+  outline: none;
+}
+
+/* — Typographie de la charte — */
+.pp-display {
+  font-family: var(--font-display);
+  font-weight: 400 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.012em;
+}
+.pp-wide {
+  font-family: var(--font-wide);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+.pp-silver {
+  background: linear-gradient(180deg, #f4f6fb 8%, #b0b8ca 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+.pp-mono {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 400;
+}
+.pp-sq {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: none;
+  background: var(--ok);
+  box-shadow: 0 0 10px var(--ok);
+}
+.pp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(7, 10, 17, 0.5);
+  font: 400 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink2);
+}
+
+/* — Verre : fond translucide, flou, reflet qui suit le pointeur, liseré fin — */
+.lg:where(:not(.absolute):not(.fixed):not(.sticky)) {
+  position: relative;
+}
+.lg {
+  isolation: isolate;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(var(--blur, 18px)) saturate(1.5);
+  backdrop-filter: blur(var(--blur, 18px)) saturate(1.5);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 0 1px 0 var(--rim),
+    inset 0 -1px 0 var(--rim-dim),
+    0 18px 40px -20px var(--shade),
+    0 2px 8px -3px var(--shade2);
+  transition:
+    box-shadow 0.35s ease,
+    background-color 0.35s ease;
+}
+.lg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    160px circle at var(--mx, 50%) var(--my, 0%),
+    var(--sheen),
+    transparent 72%
+  );
+}
+.lg:hover::before {
+  opacity: 0.9;
+}
+.lg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    140deg,
+    var(--rim) 0%,
+    transparent 32%,
+    transparent 68%,
+    var(--rim-dim) 100%
+  );
+  opacity: 0.8;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+.lg-strong {
+  background: var(--glass2);
+}
+.lg-flat {
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 0 1px 0 var(--rim);
+}
+/* grand panneau : pas de backdrop-filter pour que les bulles enfants floutent le décor et non le panneau */
+.lg-stage {
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012) 62%),
+    rgba(9, 12, 22, 0.5);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 0 1px 0 var(--rim),
+    0 40px 80px -40px var(--shade);
+}
+.lg-stage::before {
+  display: none;
+}
+@media (max-width: 1023.98px) {
+  .lg-stage {
+    background: var(--glass2);
+    -webkit-backdrop-filter: blur(30px) saturate(1.5);
+    backdrop-filter: blur(30px) saturate(1.5);
+  }
+}
+.pp-sec {
+  container-type: size;
+}
+.pp-sec-tile {
+  width: min(72cqh, 84px);
+  height: min(72cqh, 84px);
+}
+.pp-sec-label {
+  font-size: clamp(15px, 21cqh, 26px);
+}
+@media (max-width: 639.98px) {
+  .pp-sec-tile {
+    width: 42px;
+    height: 42px;
+  }
+  .pp-sec-label {
+    font-size: 14.5px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+}
+.pp-lens {
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+/* — Champs du formulaire — */
+.pp-field {
+  background: var(--field);
+  border: 1px solid var(--field-line);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition:
+    border-color 0.25s,
+    box-shadow 0.35s,
+    background-color 0.25s,
+    transform 0.35s;
+}
+.pp-field:hover {
+  background: var(--field-hi);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.pp-field:focus-within,
+.pp-field[data-active="true"] {
+  background: var(--field-hi);
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 4px var(--accent-ring),
+    0 0 34px -10px var(--accent-ring);
+}
+.pp-field::placeholder,
+.pp-field input::placeholder,
+.pp-field textarea::placeholder {
+  color: var(--ink3);
+}
+.pp-hot {
+  border-radius: 10px;
+  transition:
+    background-color 0.3s,
+    box-shadow 0.3s;
+}
+.pp-hot[data-hot="true"] {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 6px var(--accent-soft);
+}
+
+/* — Décor : halos bleutés lents + grain léger — */
+.pp-blob {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+}
+.pp-blob-a {
+  width: 62vmax;
+  height: 62vmax;
+  left: -24vmax;
+  top: -30vmax;
+  background: radial-gradient(closest-side, var(--b1), transparent 72%);
+  animation: pp-drift-a 38s ease-in-out infinite;
+}
+.pp-blob-b {
+  width: 58vmax;
+  height: 58vmax;
+  right: -20vmax;
+  top: -18vmax;
+  background: radial-gradient(closest-side, var(--b2), transparent 72%);
+  animation: pp-drift-b 46s ease-in-out infinite;
+}
+.pp-blob-c {
+  width: 60vmax;
+  height: 60vmax;
+  left: -20vmax;
+  bottom: -34vmax;
+  background: radial-gradient(closest-side, var(--b3), transparent 72%);
+  animation: pp-drift-b 52s ease-in-out infinite reverse;
+}
+.pp-blob-d {
+  width: 54vmax;
+  height: 54vmax;
+  right: -14vmax;
+  bottom: -28vmax;
+  background: radial-gradient(closest-side, var(--b4), transparent 72%);
+  animation: pp-drift-a 44s ease-in-out infinite;
+}
+.pp-blob-e {
+  width: 30vmax;
+  height: 30vmax;
+  left: 40vw;
+  top: 34vh;
+  background: radial-gradient(closest-side, var(--b5), transparent 70%);
+  animation: pp-drift-b 60s ease-in-out infinite;
+}
+.pp-grain {
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.pp-watermark {
+  transition: opacity 0.9s ease;
+}
+@keyframes pp-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(7vw, 5vh, 0) scale(1.1);
+  }
+}
+@keyframes pp-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.05);
+  }
+  50% {
+    transform: translate3d(-6vw, 6vh, 0) scale(0.95);
+  }
+}
+@keyframes pp-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(var(--bob, -5px));
+  }
+}
+.pp-bob {
+  animation: pp-bob var(--dur, 7s) ease-in-out var(--delay, 0s) infinite;
+}
+@keyframes pp-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-7px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+.pp-shake {
+  animation: pp-shake 0.45s ease;
+}
+@keyframes pp-ping {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@keyframes pp-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+/* — Carte en points — */
+.pp-cg {
+  cursor: pointer;
+  outline: none;
+}
+.pp-cg[data-rg="n"] {
+  --rgc: #e8b86b;
+}
+.pp-cg[data-rg="w"] {
+  --rgc: #6fd8cc;
+}
+.pp-cg[data-rg="c"] {
+  --rgc: #86bdf5;
+}
+.pp-cg[data-rg="e"] {
+  --rgc: #f29a98;
+}
+.pp-cg[data-rg="s"] {
+  --rgc: #bddd7e;
+}
+.pp-dots {
+  fill: none;
+  stroke: var(--dot);
+  stroke-width: 5.6;
+  stroke-linecap: round;
+  pointer-events: none;
+  transition:
+    stroke 0.3s ease,
+    stroke-width 0.3s ease;
+}
+.pp-ct {
+  fill: transparent;
+  stroke: none;
+}
+.pp-cg {
+  transition: opacity 0.3s ease;
+}
+.pp-cg:hover .pp-dots {
+  stroke: var(--dot-hover);
+  stroke-width: 6.6;
+}
+.pp-cg[data-rgh="1"] .pp-dots {
+  stroke: var(--rgc);
+  stroke-width: 6.4;
+}
+.pp-cg[data-hot="1"] .pp-dots {
+  stroke: var(--accent);
+  stroke-width: 6.8;
+}
+.pp-cg[data-dim="1"] {
+  opacity: 0.26;
+}
+.pp-cg[data-sel="1"] .pp-dots {
+  stroke: var(--dot-sel);
+  stroke-width: 7;
+}
+.pp-ring {
+  fill: rgba(255, 255, 255, 0.02);
+  stroke: var(--dot-hover);
+  stroke-opacity: 0.4;
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 2 3;
+  transition:
+    stroke 0.3s,
+    fill 0.3s,
+    stroke-opacity 0.3s;
+}
+.pp-cg:hover .pp-ring,
+.pp-cg[data-hot="1"] .pp-ring {
+  stroke: var(--accent);
+  stroke-opacity: 1;
+  fill: var(--accent-soft);
+}
+.pp-cg[data-sel="1"] .pp-ring {
+  stroke: var(--accent);
+  stroke-opacity: 1;
+  fill: var(--accent-soft2);
+  stroke-dasharray: none;
+}
+.pp-off {
+  fill: none;
+  stroke: var(--map-off);
+  stroke-width: 5.6;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.pp-sel {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  pointer-events: none;
+  animation: pp-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.pp-node {
+  pointer-events: none;
+}
+.pp-node-core {
+  fill: var(--ok);
+}
+.pp-node-ring {
+  fill: none;
+  stroke: var(--ok);
+  stroke-opacity: 0.6;
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+}
+.pp-node-ping {
+  fill: var(--ok);
+  fill-opacity: 0.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pp-ping 2.2s ease-out infinite;
+}
+
+.pp-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+.pp-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.pp-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 99px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-theme *,
+  .pp-theme *::before,
+  .pp-theme *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Surface de verre SANS flou, pour les listes (le flou est réservé à quelques surfaces) ;
+   état sélectionné calqué sur le focus d'un champ. */
+.pp-card {
+  background: var(--glass-soft);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 0 1px 0 var(--rim-dim);
+  transition:
+    box-shadow 0.3s ease,
+    background-color 0.3s ease;
+}
+.pp-card:hover {
+  background: var(--field-hi);
+}
+.pp-card[data-selected="true"] {
+  background: var(--field-hi);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    0 0 0 4px var(--accent-ring),
+    0 0 34px -10px var(--accent-ring);
+}
+
+/* — Markdown sur fond de verre (README des dépôts) — */
+.prose-glass {
+  color: var(--ink2);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.prose-glass > * + * {
+  margin-top: 0.85em;
+}
+.prose-glass h1,
+.prose-glass h2,
+.prose-glass h3 {
+  color: var(--ink);
+  line-height: 1.15;
+}
+.prose-glass h1 {
+  font-family: var(--font-display);
+  font-size: 40px;
+  letter-spacing: 0.01em;
+}
+.prose-glass h2 {
+  margin-top: 1.6em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--hair);
+  font-size: 20px;
+  font-weight: 600;
+}
+.prose-glass h3 {
+  margin-top: 1.2em;
+  font-size: 16.5px;
+  font-weight: 600;
+}
+.prose-glass a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.prose-glass ul {
+  list-style: disc;
+  padding-left: 1.3em;
+}
+.prose-glass ol {
+  list-style: decimal;
+  padding-left: 1.3em;
+}
+.prose-glass code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+  background: var(--chip);
+  color: var(--ink);
+}
+.prose-glass pre {
+  overflow-x: auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #0a0f1d;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.prose-glass pre code {
+  padding: 0;
+  background: transparent;
+}
+.prose-glass blockquote {
+  padding: 0.6em 1em;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 12px 12px 0;
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.prose-glass table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.prose-glass th,
+.prose-glass td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hair);
+  text-align: left;
+}
+.prose-glass th {
+  color: var(--ink3);
+  font-weight: 500;
+}
+.prose-glass td:first-child {
+  color: var(--ink3);
+  white-space: nowrap;
+}
+.prose-glass td {
+  color: var(--ink);
+}
+.prose-glass img {
+  max-width: 100%;
+  border-radius: 12px;
+}

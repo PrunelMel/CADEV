@@ -2,6 +2,7 @@
 // doit être une vraie photographie libre de droits, avec sa source et sa licence en commentaire.
 
 import { africanCountries } from "./countries";
+import { sectorOptions } from "./problem-form";
 
 export const site = {
   name: "Plateforme IA appliquée",
@@ -16,12 +17,12 @@ export const howItWorks = [
     text: "Une entreprise, une ONG ou une mairie publie un problème : secteur, pays, contraintes terrain, critères d'évaluation.",
   },
   {
-    title: "Des solutions rattachées",
-    text: "Les développeurs proposent un dépôt (modèle, dataset, bibliothèque) avec ses résultats terrain. Les échecs restent visibles.",
+    title: "Des dépôts rattachés",
+    text: "Chaque dépôt (modèle, dataset, bibliothèque) répond à un problème dès sa création. En construction, il montre son README ; devenu solution, tout son travail.",
   },
   {
-    title: "Une validation par le porteur",
-    text: "L'auteur du problème accepte ou rejette chaque solution et chaque contribution de données.",
+    title: "Une solution mise en avant",
+    text: "L'auteur du problème choisit la solution à mettre en avant ; sinon, c'est celle que la communauté préfère.",
   },
 ];
 
@@ -39,8 +40,12 @@ export const faq = [
     a: "Sur le continent, dans un stockage auto-hébergé compatible S3.",
   },
   {
-    q: "Qui valide une solution ?",
-    a: "L'auteur du problème, car c'est lui qui connaît le terrain et qui a posé les critères d'évaluation.",
+    q: "Qui décide qu'un dépôt est une solution ?",
+    a: "Son auteur. Tant qu'il ne l'a pas déclaré « solution », le dépôt est en construction : seul son README est visible hors de son équipe. L'auteur du problème n'accepte ni ne rejette : il peut seulement choisir la solution mise en avant ; à défaut, c'est la plus appréciée par la communauté.",
+  },
+  {
+    q: "Que devient mon dépôt si son problème est fermé ?",
+    a: "Il reste lié, mais passe derrière les autres dans le hub et la recherche, et vous êtes prévenu. Si le sujet vous semble toujours d'actualité, liez votre dépôt à un autre problème, ou publiez-en un nouveau qui explique pourquoi le travail continue.",
   },
   {
     q: "Comment proposer une modification à un dépôt dont je ne suis pas membre ?",
@@ -48,18 +53,7 @@ export const faq = [
   },
 ];
 
-export const sectors = [
-  "Agriculture",
-  "Santé",
-  "Éducation",
-  "Finance",
-  "Commerce",
-  "Transport",
-  "Énergie",
-  "Environnement",
-  "Administration publique",
-  "Langues et traduction",
-];
+export const sectors = sectorOptions.map((s) => s.label);
 
 export const countries: string[] = africanCountries.map((c) => c.name);
 
@@ -69,10 +63,9 @@ export const repoTypeLabels = {
   library: "Bibliothèque",
 } as const;
 
-export const statusLabels = {
-  pending: "En attente",
-  accepted: "Acceptée",
-  rejected: "Rejetée",
+export const repoStageLabels = {
+  under_construction: "En construction",
+  solution: "Solution",
 } as const;
 
 export const problemStatusLabels = {

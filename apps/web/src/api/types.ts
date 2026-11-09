@@ -2,8 +2,10 @@
 
 export type RepoType = "model" | "dataset" | "library";
 export type Visibility = "public" | "private";
-export type ReviewStatus = "pending" | "accepted" | "rejected";
 export type ProblemStatus = "open" | "solved" | "closed";
+/** En construction : README et fiche seulement hors de l'équipe. Solution : tout est visible. */
+export type RepoStage = "under_construction" | "solution";
+export type ProblemRef = { id: string; title: string; status: ProblemStatus };
 
 export type License = {
   id: string;
@@ -27,6 +29,10 @@ export type RepoSummary = {
   languages: string[];
   worksOffline: boolean;
   targetHardware: string;
+  stage: RepoStage;
+  problemId: string;
+  /** Présent sur les listes et la fiche ; absent des listes déjà rangées par problème. */
+  problem?: ProblemRef;
   updatedAt: string;
   license?: License;
   likes?: number;
@@ -43,8 +49,11 @@ export type RepoDetail = RepoSummary & {
   files: RepoFile[];
   likes: number;
   liked: boolean;
-  solves: { id: string; title: string; status: ReviewStatus }[];
-  permissions: { read: boolean; write: boolean; owner: boolean };
+  problem: ProblemRef;
+  /** Mis en avant par son problème. */
+  featured: boolean;
+  /** `full` : fichiers, versions, téléchargements, pull requests et discussions visibles. */
+  permissions: { read: boolean; write: boolean; owner: boolean; full: boolean };
 };
 
 export type Version = {
@@ -72,12 +81,6 @@ export type PullDetail = Omit<PullSummary, "author"> & {
   permissions: { upload: boolean; merge: boolean; close: boolean };
 };
 
-export type Validation = {
-  decision: "accepted" | "rejected";
-  comment: string;
-  createdAt: string;
-};
-
 export type ProblemSummary = {
   id: string;
   title: string;
@@ -85,21 +88,22 @@ export type ProblemSummary = {
   country: string;
   status: ProblemStatus;
   createdAt: string;
+  closedAt: string | null;
   author: string | null;
+  /** Dépôts publics liés au statut « solution ». */
   solutionCount?: number;
-  acceptedCount?: number;
+  /** Dépôts publics liés encore en construction. */
+  inProgressCount?: number;
 };
 
-export type Solution = {
-  id: string;
-  summary: string;
-  fieldResults: string;
-  status: ReviewStatus;
-  createdAt: string;
-  submittedBy: string | null;
-  repo: { owner: string; name: string; type: RepoType };
-  license: { id: string; name: string; restrictions: string[] };
-  validations: Validation[];
+/** Dépôt public lié à un problème. */
+export type LinkedRepo = RepoSummary & { license: License; likes: number };
+
+export type ProblemSolutions = {
+  /** Mise en avant par l'auteur du problème, sinon la plus aimée de la communauté. */
+  featured: { id: string; by: "author" | "community" } | null;
+  solutions: LinkedRepo[];
+  inProgress: LinkedRepo[];
 };
 
 export type Contribution = {
@@ -107,11 +111,9 @@ export type Contribution = {
   description: string;
   provenanceCommunity: string;
   provenanceCountry: string;
-  status: ReviewStatus;
   createdAt: string;
   contributor: string | null;
   dataset: { owner: string; name: string } | null;
-  validations: Validation[];
 };
 
 export type ProblemDetail = {
@@ -120,16 +122,16 @@ export type ProblemDetail = {
   description: string;
   sector: string;
   country: string;
-  connectivityConstraint: string;
-  hardwareConstraint: string;
-  languageConstraint: string;
+  connectivityConstraint: string[];
+  hardwareConstraint: string[];
+  languageConstraint: string[];
   evaluationCriteria: string;
   status: ProblemStatus;
   createdAt: string;
   author: string | null;
   isAuthor: boolean;
   workers: Worker[];
-  solutions: Solution[];
+  solutions: ProblemSolutions;
   contributions: Contribution[];
 };
 
@@ -143,12 +145,21 @@ export type Discussion = {
 export type SearchResult = {
   problems: (ProblemSummary & {
     solutions: {
-      repo: { owner: string; name: string; type: RepoType };
-      status: ReviewStatus;
-      summary: string;
+      owner: string;
+      name: string;
+      type: RepoType;
+      stage: RepoStage;
+      description: string;
     }[];
   })[];
-  repos: { owner: string; name: string; type: RepoType; description: string }[];
+  repos: {
+    owner: string;
+    name: string;
+    type: RepoType;
+    stage: RepoStage;
+    description: string;
+    problem: ProblemRef;
+  }[];
 };
 
 export type Profile = {
@@ -157,9 +168,10 @@ export type Profile = {
   image: string | null;
   createdAt: string;
   solved: {
-    problem: { id: string; title: string; country: string };
+    problem: { id: string; title: string; country: string; status: ProblemStatus };
     repo: { owner: string; name: string };
     summary: string;
+    featured: boolean;
   }[];
   posted: { id: string; title: string; country: string }[];
   repos: { owner: string; name: string; type: RepoType }[];
@@ -203,21 +215,6 @@ export type Dashboard = {
   working: { problemId: string; problemTitle: string; status: ProblemStatus; note: string }[];
   problems: { id: string; title: string; status: ProblemStatus }[];
   toReview: {
-    solutions: {
-      id: string;
-      problemId: string;
-      problemTitle: string;
-      submittedBy: string | null;
-      createdAt: string;
-      repo: RepoRef;
-    }[];
-    contributions: {
-      id: string;
-      problemId: string;
-      problemTitle: string;
-      contributor: string | null;
-      createdAt: string;
-    }[];
     pulls: {
       number: number;
       title: string;
@@ -227,20 +224,21 @@ export type Dashboard = {
     }[];
   };
   mine: {
-    solutions: {
-      id: string;
-      status: ReviewStatus;
-      problemId: string;
-      problemTitle: string;
-      repo: RepoRef;
-      createdAt: string;
-    }[];
     contributions: {
       id: string;
-      status: ReviewStatus;
       problemId: string;
       problemTitle: string;
       createdAt: string;
     }[];
   };
 };
+
+export type NotificationItem = {
+  id: string;
+  kind: "problem_closed" | "problem_reopened";
+  readAt: string | null;
+  createdAt: string;
+  problem: ProblemRef | null;
+  repo: { owner: string; name: string } | null;
+};
+export type Notifications = { unread: number; items: NotificationItem[] };

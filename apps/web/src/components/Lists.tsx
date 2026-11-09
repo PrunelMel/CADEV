@@ -2,8 +2,8 @@ import { Link } from "react-router";
 import { BrainCircuit, Database, Heart, Library, Lock, MapPin, WifiOff } from "lucide-react";
 import type { ProblemSummary, RepoSummary } from "../api/types";
 import { countryInfo } from "../content/countries";
-import { problemStatusLabels, repoTypeLabels } from "../content/site";
-import { EmptyState, Tag, formatDate, problemStatusTone } from "./ui";
+import { problemStatusLabels, repoStageLabels, repoTypeLabels } from "../content/site";
+import { EmptyState, Tag, formatDate, problemStatusTone, repoStageTone } from "./ui";
 
 const stripe = {
   open: "border-l-accent",
@@ -38,9 +38,7 @@ export function ProblemList({ items }: { items: ProblemSummary[] }) {
               {p.solutionCount !== undefined && (
                 <span>
                   {p.solutionCount} solution{p.solutionCount > 1 ? "s" : ""}
-                  {p.acceptedCount
-                    ? `, ${p.acceptedCount} acceptée${p.acceptedCount > 1 ? "s" : ""}`
-                    : ""}
+                  {p.inProgressCount ? `, ${p.inProgressCount} en construction` : ""}
                 </span>
               )}
               <span>
@@ -131,6 +129,7 @@ export function RepoList({ items }: { items: RepoSummary[] }) {
           </div>
           {r.description && <p className="text-sm text-neutral-700">{r.description}</p>}
           <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+            <Tag tone={repoStageTone[r.stage]}>{repoStageLabels[r.stage]}</Tag>
             <TechBadges repo={r} />
             {r.license && (
               <Tag tone={r.license.restrictions.length ? "amber" : "neutral"}>{r.license.name}</Tag>
@@ -140,6 +139,15 @@ export function RepoList({ items }: { items: RepoSummary[] }) {
             <p className="text-xs text-neutral-500">
               Provenance : {r.provenanceCommunity ? `${r.provenanceCommunity}, ` : ""}
               {r.provenanceCountry}
+            </p>
+          )}
+          {r.problem && (
+            <p className="text-xs text-neutral-500">
+              Répond à{" "}
+              <Link to={`/problemes/${r.problem.id}`} className="hover:underline">
+                {r.problem.title}
+              </Link>
+              {r.problem.status === "closed" && " (problème fermé)"}
             </p>
           )}
         </li>

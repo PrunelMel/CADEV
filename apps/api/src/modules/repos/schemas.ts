@@ -2,6 +2,7 @@ import { z } from "zod";
 import { filePath } from "../../lib/validate.js";
 
 export const repoType = z.enum(["model", "dataset", "library"]);
+export const repoStage = z.enum(["under_construction", "solution"]);
 
 const meta = {
   visibility: z.enum(["public", "private"]),
@@ -15,6 +16,9 @@ const meta = {
   languages: z.array(z.string().trim().min(1).max(50)).max(20),
   worksOffline: z.boolean(),
   targetHardware: z.string().max(300),
+  /** Problème auquel le dépôt répond : obligatoire, modifiable par le propriétaire. */
+  problemId: z.uuid(),
+  stage: repoStage,
 };
 
 export const createRepo = z.object({
@@ -32,6 +36,8 @@ export const createRepo = z.object({
   languages: meta.languages.default([]),
   worksOffline: meta.worksOffline.default(false),
   targetHardware: meta.targetHardware.default(""),
+  problemId: meta.problemId,
+  stage: meta.stage.default("under_construction"),
 });
 export type CreateRepo = z.infer<typeof createRepo>;
 

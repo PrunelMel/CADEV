@@ -6,14 +6,17 @@ import type {
   Discussion,
   License,
   Namespaces,
+  Notifications,
   OrgDetail,
   ProblemDetail,
+  ProblemSolutions,
   ProblemStatus,
   ProblemSummary,
   Profile,
   PullDetail,
   PullSummary,
   RepoDetail,
+  RepoStage,
   RepoSummary,
   RepoType,
   SearchResult,
@@ -60,6 +63,22 @@ export const useProfile = (username: string) =>
     queryKey: ["users", username],
     queryFn: () => api<Profile>(`/users/${username}`),
   });
+
+/** Boîte de réception ; relue toutes les minutes tant que la page est ouverte. */
+export const useNotifications = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => api<Notifications>("/me/notifications"),
+    enabled,
+    refetchInterval: 60_000,
+  });
+
+/** Sans identifiants, marque tout comme lu. */
+export const useMarkRead = () =>
+  useMutate(
+    (ids?: string[]) => api<Notifications>("/me/notifications/read", { json: { ids } }),
+    ["notifications"],
+  );
 
 export const useDashboard = (enabled: boolean) =>
   useQuery({
@@ -134,6 +153,8 @@ export const useRepo = (ref: Ref, version?: number) =>
   });
 
 export type RepoInput = {
+  problemId: string;
+  stage: RepoStage;
   type: RepoType;
   name: string;
   org?: string;
@@ -271,9 +292,9 @@ export type ProblemInput = {
   description: string;
   sector: string;
   country: string;
-  connectivityConstraint: string;
-  hardwareConstraint: string;
-  languageConstraint: string;
+  connectivityConstraint: string[];
+  hardwareConstraint: string[];
+  languageConstraint: string[];
   evaluationCriteria: string;
 };
 
@@ -322,11 +343,15 @@ export const useCreateProblem = () =>
     ["problems"],
   );
 
-export const useSubmitSolution = (problemId: string) =>
+/** Solution mise en avant par l'auteur du problème ; `null` rend la main à la communauté. */
+export const useSetFeatured = (problemId: string) =>
   useMutate(
-    (input: { repo: string; summary: string; fieldResults: string }) =>
-      api(`/problems/${problemId}/solutions`, { json: input }),
-    ["problems", problemId],
+    (repo: string | null) =>
+      api<ProblemSolutions>(`/problems/${problemId}/featured`, {
+        method: "PUT",
+        json: { repo },
+      }),
+    ["problems"],
   );
 
 export const useSubmitContribution = (problemId: string) =>
@@ -337,21 +362,6 @@ export const useSubmitContribution = (problemId: string) =>
       provenanceCountry: string;
       dataset?: string;
     }) => api(`/problems/${problemId}/contributions`, { json: input }),
-    ["problems", problemId],
-  );
-
-export const useValidate = (problemId: string) =>
-  useMutate(
-    ({
-      kind,
-      id,
-      ...input
-    }: {
-      kind: "solutions" | "contributions";
-      id: string;
-      decision: "accepted" | "rejected";
-      comment: string;
-    }) => api(`/${kind}/${id}/validate`, { json: input }),
     ["problems", problemId],
   );
 

@@ -192,10 +192,9 @@ export function Tag({ children, tone = "neutral" }: { children: ReactNode; tone?
   );
 }
 
-export const statusTone = {
-  pending: "amber",
-  accepted: "green",
-  rejected: "red",
+export const repoStageTone = {
+  under_construction: "amber",
+  solution: "green",
 } as const;
 export const problemStatusTone = {
   open: "accent",
@@ -284,14 +283,17 @@ export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
 
 /**
  * Bandeau marine pleine largeur, repris de la landing. À placer en tête de page :
- * il sort du conteneur centré du Layout.
+ * il sort du conteneur centré du Layout et remonte sous l'en-tête.
  */
 export function Band({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`relative left-1/2 -mt-8 mb-8 w-screen -translate-x-1/2 border-b border-night-line bg-night text-[#e6ebf4] ${className}`}
+      className={`relative left-1/2 -mt-[100px] mb-8 w-screen -translate-x-1/2 border-b border-night-line bg-night text-[#e6ebf4] ${className}`}
     >
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:py-14">{children}</div>
+      {/* Le bandeau passe sous l'en-tête fixe, dont les bulles flottent sur le marine. */}
+      <div className="mx-auto max-w-6xl px-4 pt-[116px] pb-10 sm:pt-[132px] sm:pb-14">
+        {children}
+      </div>
     </div>
   );
 }

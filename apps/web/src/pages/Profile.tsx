@@ -52,7 +52,7 @@ export function ProfilePage() {
                 <div className="text-right">
                   <p className="font-display text-7xl leading-none text-lilac">{u.solved.length}</p>
                   <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#8a95ab]">
-                    problème{u.solved.length > 1 ? "s" : ""} résolu{u.solved.length > 1 ? "s" : ""}
+                    solution{u.solved.length > 1 ? "s" : ""} publiée{u.solved.length > 1 ? "s" : ""}
                   </p>
                   {countries.length > 0 && (
                     <p className="mt-1 font-mono text-xs text-[#c9d1e0]">
@@ -63,7 +63,7 @@ export function ProfilePage() {
               </div>
             </Band>
 
-            <Section title="Problèmes résolus">
+            <Section title="Solutions publiées">
               {u.solved.length ? (
                 <ul className="grid gap-3 md:grid-cols-2">
                   {u.solved.map((s) => (
@@ -72,7 +72,9 @@ export function ProfilePage() {
                       className="space-y-2 rounded-lg border border-l-4 border-neutral-200 border-l-green-600 p-4 text-sm"
                     >
                       <p className="flex items-center gap-1.5 text-xs font-medium text-green-800">
-                        <CircleCheckBig size={13} /> Solution acceptée
+                        <CircleCheckBig size={13} />
+                        {s.featured ? "Solution mise en avant par le problème" : "Solution"}
+                        {s.problem.status === "closed" && " · problème fermé"}
                       </p>
                       <Link
                         to={`/problemes/${s.problem.id}`}
@@ -89,7 +91,7 @@ export function ProfilePage() {
                   ))}
                 </ul>
               ) : (
-                <EmptyState>Aucune solution validée pour l'instant.</EmptyState>
+                <EmptyState>Aucune solution publiée pour l'instant.</EmptyState>
               )}
             </Section>
 

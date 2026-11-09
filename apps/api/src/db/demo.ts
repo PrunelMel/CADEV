@@ -1,6 +1,6 @@
 /**
- * Données de démonstration (Coupe CAdev) : comptes, organisation, dépôts avec fichiers,
- * problèmes, solutions, contributions, discussions et likes.
+ * Données de démonstration (Coupe CAdev) : comptes, organisation, problèmes, dépôts liés à leur
+ * problème (solutions et dépôts en construction), contributions, notifications, discussions, likes.
  *
  *   npm run db:demo
  *
@@ -56,10 +56,83 @@ async function main() {
     { orgId: org.id, userId: id.sena, role: "member" },
   ]);
 
-  /* ---------- Dépôts ---------- */
+  /* ---------- Problèmes ---------- */
+
+  const [manioc, darija, livraison, sante, meteo] = await db
+    .insert(t.problems)
+    .values([
+      {
+        title: "Détecter les maladies du manioc au champ",
+        description:
+          "Nos producteurs découvrent la mosaïque et la striure brune trop tard : jusqu'à la moitié de la récolte est perdue. Nous voulons un diagnostic à partir d'une photo de feuille, directement dans le champ.",
+        sector: "Agriculture",
+        country: "Bénin",
+        connectivityConstraint: ["Hors ligne"],
+        hardwareConstraint: ["Téléphone Android d'entrée de gamme"],
+        languageConstraint: ["Fon", "Français"],
+        evaluationCriteria:
+          "Précision d'au moins 85 % sur nos photos de terrain, réponse en moins d'une seconde, aucune connexion requise.",
+        authorId: id.aminata,
+      },
+      {
+        title: "Comprendre les messages clients écrits en darija et en Arabizi",
+        description:
+          "Notre service client reçoit des milliers de messages par jour mélangeant darija en lettres latines, français et anglais. Les outils de tri automatique échouent sur ces messages.",
+        sector: "Commerce",
+        country: "Maroc",
+        languageConstraint: ["Darija", "Arabizi", "Français", "Anglais"],
+        evaluationCriteria:
+          "Taux de bon routage des messages vers le bon service, mesuré sur 1 000 messages réels anonymisés.",
+        authorId: id.yasmine,
+      },
+      {
+        title: "Livrer à une adresse décrite par des repères",
+        description:
+          "Nos livreurs reçoivent des adresses du type « deuxième von après l'église, portail bleu ». Ils perdent en moyenne vingt minutes par course à chercher.",
+        sector: "Transport",
+        country: "Bénin",
+        connectivityConstraint: ["3G", "Réseau intermittent"],
+        languageConstraint: ["Français", "Fon"],
+        evaluationCriteria:
+          "Distance médiane entre la position estimée et la vraie adresse, sur 500 livraisons.",
+        authorId: id.sena,
+      },
+      {
+        title: "Transcrire les consultations prénatales en fon",
+        description:
+          "Les sages-femmes des centres de santé ruraux remplissent les fiches après coup, de mémoire. Une transcription des échanges en fon les aiderait à ne rien oublier.",
+        sector: "Santé",
+        country: "Bénin",
+        connectivityConstraint: ["Réseau intermittent", "Bande passante faible"],
+        hardwareConstraint: ["Tablette"],
+        languageConstraint: ["Fon"],
+        evaluationCriteria:
+          "Taux d'erreur par mot inférieur à 25 %, données qui ne quittent pas le pays.",
+        authorId: id.aminata,
+      },
+      {
+        title: "Diffuser les alertes météo en wolof par message vocal",
+        description:
+          "Les alertes de fortes pluies n'arrivent qu'en français écrit. Les pêcheurs de Kayar ne les lisent pas. Il fallait des messages vocaux en wolof.",
+        sector: "Environnement",
+        country: "Sénégal",
+        connectivityConstraint: ["2G"],
+        hardwareConstraint: ["Téléphone à touches"],
+        languageConstraint: ["Wolof"],
+        evaluationCriteria: "Message compris par 9 pêcheurs sur 10 lors d'un test d'écoute.",
+        status: "closed",
+        closedAt: new Date("2026-10-15T09:00:00Z"),
+        authorId: id.sena,
+      },
+    ])
+    .returning();
+
+  /* ---------- Dépôts : chacun répond à un problème ---------- */
 
   type RepoSeed = {
     owner: Who | "org";
+    problem: { id: string };
+    stage: "under_construction" | "solution";
     type: "model" | "dataset" | "library";
     name: string;
     licenseId: string;
@@ -79,6 +152,8 @@ async function main() {
   const repos: RepoSeed[] = [
     {
       owner: "koffi",
+      problem: manioc,
+      stage: "solution",
       type: "model",
       name: "manioc-mobilenet",
       licenseId: "apache-2.0",
@@ -102,7 +177,11 @@ Le modèle tourne **sans connexion** sur un téléphone Android à 2 Go de RAM, 
 
 ## Entraînement
 
-Entraîné sur le jeu public Cassava Leaf Disease, puis affiné sur 1 800 photos prises au champ à Bohicon et Djidja.`,
+Entraîné sur le jeu public Cassava Leaf Disease, puis affiné sur 1 800 photos prises au champ à Bohicon et Djidja.
+
+## Résultats terrain
+
+Testé pendant trois semaines par douze producteurs à Djidja : 88 % de bons diagnostics, 0,3 s par photo hors ligne. Échecs fréquents à contre-jour.`,
       limitations:
         "Précision en baisse sur les photos prises à contre-jour. Non testé sur les variétés locales Ben 86052 et RB 89509.",
       files: {
@@ -116,6 +195,8 @@ Entraîné sur le jeu public Cassava Leaf Disease, puis affiné sur 1 800 photos
     },
     {
       owner: "org",
+      problem: manioc,
+      stage: "solution",
       type: "dataset",
       name: "feuilles-manioc-zou",
       licenseId: "noodl",
@@ -137,6 +218,8 @@ Toute réutilisation commerciale hors du continent implique un retour vers la co
     },
     {
       owner: "yasmine",
+      problem: darija,
+      stage: "solution",
       type: "library",
       name: "arabizi-norm",
       licenseId: "mit",
@@ -156,7 +239,11 @@ from arabizi_norm import normalize
 normalize("wach t9der t3awni f had l'formulaire ?")
 \`\`\`
 
-Règles écrites avec des locuteurs de Casablanca, Fès et Oujda.`,
+Règles écrites avec des locuteurs de Casablanca, Fès et Oujda.
+
+## Résultats terrain
+
+Normalisation avant classification : le bon routage est passé de 61 % à 83 % sur 1 000 messages de septembre.`,
       limitations: "Le darija oriental et le hassania sont encore mal couverts.",
       files: {
         "arabizi_norm/__init__.py": "def normalize(text: str) -> str:\n    return text\n",
@@ -164,6 +251,8 @@ Règles écrites avec des locuteurs de Casablanca, Fès et Oujda.`,
     },
     {
       owner: "sena",
+      problem: livraison,
+      stage: "solution",
       type: "library",
       name: "geo-reperes",
       licenseId: "cc-by-sa-4.0",
@@ -178,7 +267,11 @@ Dans beaucoup de quartiers, l'adresse se donne par repères. Cette bibliothèque
 
 1. Extraction des repères et des relations (*derrière*, *à côté de*, *en face de*)
 2. Recherche dans la base de repères de Cotonou (4 300 points)
-3. Estimation de la position et d'un rayon de confiance`,
+3. Estimation de la position et d'un rayon de confiance
+
+## Résultats terrain
+
+Distance médiane de 140 m sur 320 livraisons à Cotonou.`,
       limitations: "Base de repères limitée à Cotonou et Abomey-Calavi.",
       files: {
         "reperes/cotonou.geojson": '{"type":"FeatureCollection","features":[]}\n',
@@ -186,6 +279,8 @@ Dans beaucoup de quartiers, l'adresse se donne par repères. Cette bibliothèque
     },
     {
       owner: "koffi",
+      problem: sante,
+      stage: "under_construction",
       type: "model",
       name: "whisper-fon-small",
       licenseId: "cc-by-nc-4.0",
@@ -197,16 +292,35 @@ Dans beaucoup de quartiers, l'adresse se donne par repères. Cette bibliothèque
 
 Affiné sur 40 heures d'enregistrements en fon (radio communautaire et consultations simulées).
 
-Taux d'erreur par mot : 31 % sur le jeu de test.`,
+Taux d'erreur par mot : 31 % sur le jeu de test, au-dessus des 25 % demandés : le dépôt reste en construction.`,
       limitations:
         "Nécessite une connexion au serveur de transcription : ne tourne pas sur téléphone.",
       files: { "README.txt": "Poids disponibles sur demande.\n" },
+    },
+    {
+      owner: "yasmine",
+      problem: meteo,
+      stage: "under_construction",
+      type: "model",
+      name: "alertes-wolof-tts",
+      licenseId: "cc-by-4.0",
+      description: "Synthèse vocale en wolof pour lire les bulletins météo au téléphone.",
+      task: "Synthèse vocale",
+      languages: ["Wolof"],
+      worksOffline: false,
+      targetHardware: "Serveur vocal interactif",
+      readme: `# Alertes météo en wolof
+
+Voix de synthèse entraînée sur 12 heures de lecture de bulletins par deux animateurs de radio de Kayar.
+
+Le problème d'origine a été fermé : le dépôt cherche un nouveau problème.`,
+      files: { "voix/config.json": '{"locuteurs":2}\n' },
     },
   ];
 
   const repoId: Record<string, string> = {};
   for (const r of repos) {
-    const { owner, files, ...data } = r;
+    const { owner, files, problem, ...data } = r;
     const ownerFields =
       owner === "org"
         ? { ownerSlug: org.slug, ownerOrgId: org.id, ownerUserId: null }
@@ -214,7 +328,7 @@ Taux d'erreur par mot : 31 % sur le jeu de test.`,
     const createdBy = owner === "org" ? id.aminata : id[owner];
     const [repo] = await db
       .insert(t.repositories)
-      .values({ ...data, ...ownerFields, createdBy })
+      .values({ ...data, problemId: problem.id, ...ownerFields, createdBy })
       .returning();
     repoId[r.name] = repo.id;
 
@@ -236,124 +350,20 @@ Taux d'erreur par mot : 31 % sur le jeu de test.`,
     }
   }
 
-  /* ---------- Problèmes ---------- */
+  /* ---------- Solution mise en avant, notification ---------- */
 
-  const [manioc, darija, livraison, sante] = await db
-    .insert(t.problems)
-    .values([
-      {
-        title: "Détecter les maladies du manioc au champ",
-        description:
-          "Nos producteurs découvrent la mosaïque et la striure brune trop tard : jusqu'à la moitié de la récolte est perdue. Nous voulons un diagnostic à partir d'une photo de feuille, directement dans le champ.",
-        sector: "Agriculture",
-        country: "Bénin",
-        connectivityConstraint: "Hors ligne : pas de réseau dans la plupart des champs",
-        hardwareConstraint: "Téléphone Android d'entrée de gamme, 2 Go de RAM",
-        languageConstraint: "Interface en fon et en français",
-        evaluationCriteria:
-          "Précision d'au moins 85 % sur nos photos de terrain, réponse en moins d'une seconde, aucune connexion requise.",
-        authorId: id.aminata,
-      },
-      {
-        title: "Comprendre les messages clients écrits en darija et en Arabizi",
-        description:
-          "Notre service client reçoit des milliers de messages par jour mélangeant darija en lettres latines, français et anglais. Les outils de tri automatique échouent sur ces messages.",
-        sector: "Commerce",
-        country: "Maroc",
-        languageConstraint: "Darija en Arabizi, français, anglais, souvent dans la même phrase",
-        evaluationCriteria:
-          "Taux de bon routage des messages vers le bon service, mesuré sur 1 000 messages réels anonymisés.",
-        authorId: id.yasmine,
-      },
-      {
-        title: "Livrer à une adresse décrite par des repères",
-        description:
-          "Nos livreurs reçoivent des adresses du type « deuxième von après l'église, portail bleu ». Ils perdent en moyenne vingt minutes par course à chercher.",
-        sector: "Transport",
-        country: "Bénin",
-        connectivityConstraint: "Réseau 3G intermittent",
-        languageConstraint: "Français, fon",
-        evaluationCriteria:
-          "Distance médiane entre la position estimée et la vraie adresse, sur 500 livraisons.",
-        authorId: id.sena,
-      },
-      {
-        title: "Transcrire les consultations prénatales en fon",
-        description:
-          "Les sages-femmes des centres de santé ruraux remplissent les fiches après coup, de mémoire. Une transcription des échanges en fon les aiderait à ne rien oublier.",
-        sector: "Santé",
-        country: "Bénin",
-        connectivityConstraint: "Connexion limitée, envoi possible en fin de journée",
-        hardwareConstraint: "Tablette fournie par le centre de santé",
-        languageConstraint: "Fon",
-        evaluationCriteria:
-          "Taux d'erreur par mot inférieur à 25 %, données qui ne quittent pas le pays.",
-        authorId: id.aminata,
-      },
-    ])
-    .returning();
-
-  /* ---------- Solutions et décisions ---------- */
-
-  const [solManioc, , solDarija] = await db
-    .insert(t.solutions)
-    .values([
-      {
-        problemId: manioc.id,
-        repoId: repoId["manioc-mobilenet"],
-        submittedBy: id.koffi,
-        summary: "MobileNetV3 quantifié, affiné sur les photos de la coopérative.",
-        fieldResults:
-          "Testé pendant trois semaines par douze producteurs à Djidja : 88 % de bons diagnostics, 0,3 s par photo hors ligne. Échecs fréquents à contre-jour.",
-        status: "accepted",
-      },
-      {
-        problemId: manioc.id,
-        repoId: repoId["whisper-fon-small"],
-        submittedBy: id.koffi,
-        summary: "Piste abandonnée : décrire les symptômes à l'oral plutôt que photographier.",
-        fieldResults: "Les producteurs préfèrent la photo. La transcription demande une connexion.",
-        status: "rejected",
-      },
-      {
-        problemId: darija.id,
-        repoId: repoId["arabizi-norm"],
-        submittedBy: id.yasmine,
-        summary:
-          "Normalisation avant classification : l'outil de tri existant fonctionne mieux sur le texte nettoyé.",
-        fieldResults: "Bon routage passé de 61 % à 83 % sur 1 000 messages de septembre.",
-        status: "pending",
-      },
-      {
-        problemId: livraison.id,
-        repoId: repoId["geo-reperes"],
-        submittedBy: id.sena,
-        summary: "Résolution des repères à partir d'une base collectée par les livreurs eux-mêmes.",
-        fieldResults: "Distance médiane de 140 m sur 320 livraisons à Cotonou.",
-        status: "pending",
-      },
-      {
-        problemId: sante.id,
-        repoId: repoId["whisper-fon-small"],
-        submittedBy: id.koffi,
-        summary: "Whisper small affiné en fon, à héberger sur un serveur national.",
-        fieldResults: "31 % d'erreur par mot, au-dessus du seuil demandé.",
-        status: "pending",
-      },
-    ])
-    .returning();
-
-  await db.insert(t.validations).values([
-    {
-      targetType: "solution",
-      targetId: solManioc.id,
-      decision: "accepted",
-      comment: "Validé après l'essai à Djidja, merci pour le retour terrain.",
-      validatorId: id.aminata,
-    },
-  ]);
-  await db.update(t.problems).set({ status: "solved" }).where(eq(t.problems.id, manioc.id));
-  void solDarija;
+  // L'autrice du problème du manioc met en avant le modèle testé à Djidja.
+  await db
+    .update(t.problems)
+    .set({ status: "solved", featuredRepoId: repoId["manioc-mobilenet"] })
+    .where(eq(t.problems.id, manioc.id));
+  // Yasmine a été prévenue de la fermeture du problème des alertes météo.
+  await db.insert(t.notifications).values({
+    userId: id.yasmine,
+    kind: "problem_closed",
+    problemId: meteo.id,
+    repoId: repoId["alertes-wolof-tts"],
+  });
 
   await db.insert(t.dataContributions).values([
     {
@@ -363,7 +373,6 @@ Taux d'erreur par mot : 31 % sur le jeu de test.`,
       description: "1 800 photos de feuilles annotées par deux agronomes de la coopérative.",
       provenanceCommunity: "Producteurs du plateau d'Abomey",
       provenanceCountry: "Bénin",
-      status: "accepted",
     },
     {
       problemId: livraison.id,
@@ -371,7 +380,6 @@ Taux d'erreur par mot : 31 % sur le jeu de test.`,
       description: "Liste de 600 repères relevés à Akpakpa avec leur position GPS.",
       provenanceCommunity: "Livreurs moto d'Akpakpa",
       provenanceCountry: "Bénin",
-      status: "pending",
     },
   ]);
 
@@ -422,7 +430,7 @@ Taux d'erreur par mot : 31 % sur le jeu de test.`,
   ]);
 
   console.log(
-    `Démo prête : ${people.length} comptes (mot de passe ${PASSWORD}), ${repos.length} dépôts, 4 problèmes.`,
+    `Démo prête : ${people.length} comptes (mot de passe ${PASSWORD}), ${repos.length} dépôts, 5 problèmes.`,
   );
 }
 

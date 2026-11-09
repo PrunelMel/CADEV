@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -10,7 +11,9 @@ import {
   timestamp,
   unique,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import type { Answer, Answers, FormConfig } from "../modules/contributions/form/model/formModel.js";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 const createdAt = () => ts("created_at").notNull().defaultNow();
@@ -111,6 +114,11 @@ export const licenses = pgTable("licenses", {
 
 export const repoType = pgEnum("repo_type", ["model", "dataset", "library"]);
 export const visibility = pgEnum("visibility", ["public", "private"]);
+/**
+ * En construction : seul le README (et la fiche) est visible hors propriétaire et collaborateurs.
+ * Solution : le dépôt entier est visible, et proposé comme solution de son problème.
+ */
+export const repoStage = pgEnum("repo_stage", ["under_construction", "solution"]);
 
 export const repositories = pgTable(
   "repositories",
@@ -124,6 +132,11 @@ export const repositories = pgTable(
       onDelete: "cascade",
     }),
     visibility: visibility("visibility").notNull().default("public"),
+    // Tout dépôt répond à un problème, dès sa création ; son propriétaire peut en changer.
+    problemId: uuid("problem_id")
+      .notNull()
+      .references((): AnyPgColumn => problems.id),
+    stage: repoStage("stage").notNull().default("under_construction"),
     licenseId: text("license_id")
       .notNull()
       .references(() => licenses.id),
@@ -141,7 +154,7 @@ export const repositories = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [unique().on(t.ownerSlug, t.name)],
+  (t) => [unique().on(t.ownerSlug, t.name), index().on(t.problemId)],
 );
 
 export const repositoryCollaborators = pgTable(
@@ -234,11 +247,18 @@ export const problems = pgTable("problems", {
   description: text("description").notNull(),
   sector: text("sector").notNull(),
   country: text("country").notNull(),
-  connectivityConstraint: text("connectivity_constraint").notNull().default(""),
-  hardwareConstraint: text("hardware_constraint").notNull().default(""),
-  languageConstraint: text("language_constraint").notNull().default(""),
-  evaluationCriteria: text("evaluation_criteria").notNull(),
+  // Étiquettes choisies dans les listes du formulaire ou créées par l'auteur.
+  connectivityConstraint: text("connectivity_constraint").array().notNull().default([]),
+  hardwareConstraint: text("hardware_constraint").array().notNull().default([]),
+  languageConstraint: text("language_constraint").array().notNull().default([]),
+  evaluationCriteria: text("evaluation_criteria").notNull().default(""),
   status: problemStatus("status").notNull().default("open"),
+  // Date de fermeture, affichée sur la liste ; vidée si l'auteur rouvre le problème.
+  closedAt: ts("closed_at"),
+  // Solution mise en avant par l'auteur ; sinon, celle que la communauté préfère (likes).
+  featuredRepoId: uuid("featured_repo_id").references((): AnyPgColumn => repositories.id, {
+    onDelete: "set null",
+  }),
   authorId: userRef("author_id").notNull(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -258,27 +278,6 @@ export const problemWorkers = pgTable(
   (t) => [primaryKey({ columns: [t.problemId, t.userId] })],
 );
 
-export const reviewStatus = pgEnum("review_status", ["pending", "accepted", "rejected"]);
-
-export const solutions = pgTable(
-  "solutions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    problemId: uuid("problem_id")
-      .notNull()
-      .references(() => problems.id, { onDelete: "cascade" }),
-    repoId: uuid("repo_id")
-      .notNull()
-      .references(() => repositories.id, { onDelete: "cascade" }),
-    submittedBy: userRef("submitted_by").notNull(),
-    summary: text("summary").notNull(),
-    fieldResults: text("field_results").notNull().default(""),
-    status: reviewStatus("status").notNull().default("pending"),
-    createdAt: createdAt(),
-  },
-  (t) => [unique().on(t.problemId, t.repoId)],
-);
-
 export const dataContributions = pgTable("data_contributions", {
   id: uuid("id").primaryKey().defaultRandom(),
   problemId: uuid("problem_id")
@@ -291,26 +290,8 @@ export const dataContributions = pgTable("data_contributions", {
   description: text("description").notNull(),
   provenanceCommunity: text("provenance_community").notNull(),
   provenanceCountry: text("provenance_country").notNull(),
-  status: reviewStatus("status").notNull().default("pending"),
   createdAt: createdAt(),
 });
-
-export const validationTarget = pgEnum("validation_target", ["solution", "contribution"]);
-export const decision = pgEnum("decision", ["accepted", "rejected"]);
-
-export const validations = pgTable(
-  "validations",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    targetType: validationTarget("target_type").notNull(),
-    targetId: uuid("target_id").notNull(),
-    decision: decision("decision").notNull(),
-    comment: text("comment").notNull().default(""),
-    validatorId: userRef("validator_id").notNull(),
-    createdAt: createdAt(),
-  },
-  (t) => [index().on(t.targetType, t.targetId)],
-);
 
 /* ---------- Communauté ---------- */
 
@@ -339,4 +320,132 @@ export const discussions = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index().on(t.targetType, t.targetId)],
+);
+
+/* ---------- Contribution de données : page-formulaire ----------
+ * Configuration, révisions, réponses et relectures vivent ici (source de vérité). Les médias et
+ * les fichiers lisibles (CSV, XLSX, TXT, dictionnaire) sont rangés dans le stockage objet, sous
+ * problems/<id>/contribution/ : voir modules/contributions/form/tree.ts. */
+
+export const contributionForms = pgTable("contribution_forms", {
+  problemId: uuid("problem_id")
+    .primaryKey()
+    .references(() => problems.id, { onDelete: "cascade" }),
+  draft: jsonb("draft").$type<FormConfig>().notNull(),
+  published: jsonb("published").$type<FormConfig>(),
+  /** Page HTML importée (mode « code »), brouillon et version publiée. */
+  codeDraft: text("code_draft"),
+  codePublished: text("code_published"),
+  /** Une écriture des fichiers de réponses a échoué : la prochaine réponse les reconstruit. */
+  viewsDirty: boolean("views_dirty").notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const contributionFormRevisions = pgTable(
+  "contribution_form_revisions",
+  {
+    problemId: uuid("problem_id")
+      .notNull()
+      .references(() => problems.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull(),
+    config: jsonb("config").$type<FormConfig>().notNull(),
+    publishedAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.problemId, t.revision] })],
+);
+
+export const contributionMediaKind = pgEnum("contribution_media_kind", [
+  "image",
+  "gif",
+  "audio",
+  "video",
+]);
+
+export const contributionResources = pgTable(
+  "contribution_resources",
+  {
+    id: text("id").primaryKey(),
+    problemId: uuid("problem_id")
+      .notNull()
+      .references(() => problems.id, { onDelete: "cascade" }),
+    kind: contributionMediaKind("kind").notNull(),
+    name: text("name").notNull(),
+    /** Nom du fichier dans resources/<dossier du type>/. */
+    file: text("file").notNull(),
+    mime: text("mime").notNull(),
+    size: integer("size").notNull(),
+    sha256: text("sha256").notNull(),
+    storageKey: text("storage_key").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [unique().on(t.problemId, t.kind, t.sha256), index().on(t.problemId)],
+);
+
+export type MediaRef = { resourceId: string; kind: string; file: string };
+
+/** Journal des réponses : une ligne par contribution, jamais modifiée. */
+export const contributionSubmissions = pgTable(
+  "contribution_submissions",
+  {
+    problemId: uuid("problem_id")
+      .notNull()
+      .references(() => problems.id, { onDelete: "cascade" }),
+    /** Identifiant généré par le client : un renvoi ne crée jamais de doublon. */
+    id: text("id").notNull(),
+    contributorId: text("contributor_id").references(() => users.id, { onDelete: "set null" }),
+    formRevision: integer("form_revision").notNull(),
+    answers: jsonb("answers").$type<Answers>().notNull(),
+    media: jsonb("media").$type<Record<string, MediaRef>>().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.problemId, t.id] }), index().on(t.problemId, t.createdAt)],
+);
+
+export const contributionReviewVerdict = pgEnum("contribution_review_verdict", [
+  "agree",
+  "correct",
+]);
+
+/**
+ * Retours du bloc « Validation de données ». Les réponses d'origine ne sont jamais modifiées ;
+ * personne ne tranche : le nombre de relecteurs d'accord sur une correction est le seul signal.
+ */
+export const contributionReviews = pgTable(
+  "contribution_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    problemId: uuid("problem_id")
+      .notNull()
+      .references(() => problems.id, { onDelete: "cascade" }),
+    blockId: text("block_id").notNull(),
+    submissionId: text("submission_id").notNull(),
+    field: text("field").notNull(),
+    verdict: contributionReviewVerdict("verdict").notNull(),
+    proposedValue: jsonb("proposed_value").$type<Answer>(),
+    comment: text("comment").notNull().default(""),
+    reviewerId: text("reviewer_id").references(() => users.id, { onDelete: "set null" }),
+    formRevision: integer("form_revision").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.problemId), unique().on(t.problemId, t.submissionId, t.field, t.reviewerId)],
+);
+
+/* ---------- Notifications ---------- */
+
+export const notificationKind = pgEnum("notification_kind", ["problem_closed", "problem_reopened"]);
+
+/** Boîte de réception : chaque notification est aussi envoyée par e-mail quand c'est configuré. */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: userRef("user_id").notNull(),
+    kind: notificationKind("kind").notNull(),
+    problemId: uuid("problem_id").references(() => problems.id, { onDelete: "cascade" }),
+    repoId: uuid("repo_id").references(() => repositories.id, { onDelete: "cascade" }),
+    readAt: ts("read_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.userId, t.createdAt)],
 );

@@ -2,3 +2,5 @@ node_modules
 dist
 package-lock.json
 apps/api/drizzle/meta
+contribution-feature
+africa-hero

@@ -1,23 +1,26 @@
 import { z } from "zod";
 
+const tags = z.array(z.string().trim().min(1).max(100)).max(30);
+
 const fields = {
   title: z.string().min(5).max(200),
   description: z.string().min(20).max(20_000),
   sector: z.string().min(1).max(100),
   country: z.string().min(1).max(100),
-  connectivityConstraint: z.string().max(1000),
-  hardwareConstraint: z.string().max(1000),
-  languageConstraint: z.string().max(1000),
-  evaluationCriteria: z.string().min(10).max(10_000),
+  connectivityConstraint: tags,
+  hardwareConstraint: tags,
+  languageConstraint: tags,
+  evaluationCriteria: z.string().max(10_000),
 };
 
 export const problemStatus = z.enum(["open", "solved", "closed"]);
 
 export const createProblem = z.object({
   ...fields,
-  connectivityConstraint: fields.connectivityConstraint.default(""),
-  hardwareConstraint: fields.hardwareConstraint.default(""),
-  languageConstraint: fields.languageConstraint.default(""),
+  connectivityConstraint: tags.default([]),
+  hardwareConstraint: tags.default([]),
+  languageConstraint: tags.default([]),
+  evaluationCriteria: fields.evaluationCriteria.default(""),
 });
 export type CreateProblem = z.infer<typeof createProblem>;
 

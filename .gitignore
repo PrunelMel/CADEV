@@ -8,3 +8,7 @@ dist/
 coverage/
 __pycache__/
 .venv/
+
+# Maquettes et sources fournies par l'équipe, intégrées dans apps/web
+contribution-feature/
+africa-hero/

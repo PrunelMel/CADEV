@@ -1,33 +1,36 @@
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db, schema as t } from "../../db/index.js";
 import { userByUsername } from "../orgs/service.js";
-import { summary } from "../repos/service.js";
+import { closedLast, problemOf, summary } from "../repos/service.js";
 
 /** Le profil met en avant les problèmes résolus, pas la liste brute des dépôts. */
 export async function profile(username: string) {
   const user = await userByUsername(username);
 
+  // Ses dépôts publics au statut « solution », avec le problème auquel ils répondent ;
+  // `featured` : la solution que le problème met en avant.
   const solved = await db
     .select({
       problem: {
         id: t.problems.id,
         title: t.problems.title,
         country: t.problems.country,
+        status: t.problems.status,
       },
       repo: { owner: t.repositories.ownerSlug, name: t.repositories.name },
-      summary: t.solutions.summary,
+      summary: t.repositories.description,
+      featured: sql<boolean>`${t.problems.featuredRepoId} = ${t.repositories.id}`,
     })
-    .from(t.solutions)
-    .innerJoin(t.problems, eq(t.problems.id, t.solutions.problemId))
-    .innerJoin(t.repositories, eq(t.repositories.id, t.solutions.repoId))
+    .from(t.repositories)
+    .innerJoin(t.problems, eq(t.problems.id, t.repositories.problemId))
     .where(
       and(
-        eq(t.solutions.submittedBy, user.id),
-        eq(t.solutions.status, "accepted"),
+        eq(t.repositories.ownerUserId, user.id),
+        eq(t.repositories.stage, "solution"),
         eq(t.repositories.visibility, "public"),
       ),
     )
-    .orderBy(desc(t.solutions.createdAt));
+    .orderBy(closedLast, desc(t.repositories.updatedAt));
 
   const posted = await db
     .select({
@@ -79,8 +82,8 @@ export async function myNamespaces(userId: string, username: string | null) {
 
 /**
  * Tableau de bord : ce qui attend l'utilisateur.
- * Dépôts accessibles en écriture (privés compris), décisions à prendre sur ses problèmes,
- * et suivi de ses propres propositions.
+ * Dépôts accessibles en écriture (privés compris) avec leur problème, pull requests à traiter,
+ * ses problèmes et ses propositions de données.
  */
 export async function dashboard(userId: string) {
   const adminOrgs = db
@@ -91,9 +94,10 @@ export async function dashboard(userId: string) {
     .select({ id: t.repositoryCollaborators.repoId })
     .from(t.repositoryCollaborators)
     .where(eq(t.repositoryCollaborators.userId, userId));
-  const repos = await db
-    .select()
+  const rows = await db
+    .select({ repo: t.repositories, problem: problemOf })
     .from(t.repositories)
+    .innerJoin(t.problems, eq(t.problems.id, t.repositories.problemId))
     .where(
       or(
         eq(t.repositories.ownerUserId, userId),
@@ -102,6 +106,7 @@ export async function dashboard(userId: string) {
       ),
     )
     .orderBy(desc(t.repositories.updatedAt));
+  const repos = rows.map((r) => r.repo);
 
   const myProblems = await db
     .select({
@@ -112,72 +117,9 @@ export async function dashboard(userId: string) {
     .from(t.problems)
     .where(eq(t.problems.authorId, userId))
     .orderBy(desc(t.problems.createdAt));
-  const problemIds = myProblems.map((p) => p.id);
-
-  const pendingSolutions = problemIds.length
-    ? await db
-        .select({
-          id: t.solutions.id,
-          problemId: t.solutions.problemId,
-          problemTitle: t.problems.title,
-          submittedBy: t.users.username,
-          createdAt: t.solutions.createdAt,
-          repo: { owner: t.repositories.ownerSlug, name: t.repositories.name },
-        })
-        .from(t.solutions)
-        .innerJoin(t.problems, eq(t.problems.id, t.solutions.problemId))
-        .innerJoin(t.users, eq(t.users.id, t.solutions.submittedBy))
-        .innerJoin(t.repositories, eq(t.repositories.id, t.solutions.repoId))
-        .where(
-          and(
-            inArray(t.solutions.problemId, problemIds),
-            eq(t.solutions.status, "pending"),
-            eq(t.repositories.visibility, "public"),
-          ),
-        )
-        .orderBy(desc(t.solutions.createdAt))
-    : [];
-
-  const pendingContributions = problemIds.length
-    ? await db
-        .select({
-          id: t.dataContributions.id,
-          problemId: t.dataContributions.problemId,
-          problemTitle: t.problems.title,
-          contributor: t.users.username,
-          createdAt: t.dataContributions.createdAt,
-        })
-        .from(t.dataContributions)
-        .innerJoin(t.problems, eq(t.problems.id, t.dataContributions.problemId))
-        .innerJoin(t.users, eq(t.users.id, t.dataContributions.contributorId))
-        .where(
-          and(
-            inArray(t.dataContributions.problemId, problemIds),
-            eq(t.dataContributions.status, "pending"),
-          ),
-        )
-        .orderBy(desc(t.dataContributions.createdAt))
-    : [];
-
-  const mySolutions = await db
-    .select({
-      id: t.solutions.id,
-      status: t.solutions.status,
-      problemId: t.problems.id,
-      problemTitle: t.problems.title,
-      repo: { owner: t.repositories.ownerSlug, name: t.repositories.name },
-      createdAt: t.solutions.createdAt,
-    })
-    .from(t.solutions)
-    .innerJoin(t.problems, eq(t.problems.id, t.solutions.problemId))
-    .innerJoin(t.repositories, eq(t.repositories.id, t.solutions.repoId))
-    .where(eq(t.solutions.submittedBy, userId))
-    .orderBy(desc(t.solutions.createdAt));
-
   const myContributions = await db
     .select({
       id: t.dataContributions.id,
-      status: t.dataContributions.status,
       problemId: t.problems.id,
       problemTitle: t.problems.title,
       createdAt: t.dataContributions.createdAt,
@@ -225,14 +167,10 @@ export async function dashboard(userId: string) {
     .orderBy(desc(t.problemWorkers.createdAt));
 
   return {
-    repos: repos.map(summary),
+    repos: rows.map((r) => summary(r.repo, r.problem)),
     working,
     problems: myProblems,
-    toReview: {
-      solutions: pendingSolutions,
-      contributions: pendingContributions,
-      pulls: openPulls,
-    },
-    mine: { solutions: mySolutions, contributions: myContributions },
+    toReview: { pulls: openPulls },
+    mine: { contributions: myContributions },
   };
 }

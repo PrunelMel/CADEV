@@ -48,6 +48,15 @@ async function findWritable(owner: string, name: string, userId: string) {
   return found;
 }
 
+/** Tout le contenu : un dépôt « en construction » ne montre que son README hors de son équipe. */
+async function findFull(owner: string, name: string, userId?: string) {
+  const found = await findRepo(owner, name, userId);
+  if (!found.access.full) {
+    throw forbidden("Dépôt en construction : seul son README est visible pour l'instant");
+  }
+  return found;
+}
+
 async function findOwned(owner: string, name: string, userId: string) {
   const found = await findRepo(owner, name, userId);
   if (!found.access.owner) throw forbidden();
@@ -138,6 +147,22 @@ function commit(
 
 /* ---------- Dépôts ---------- */
 
+/** Problème d'un dépôt, tel qu'il s'affiche avec lui. */
+export const problemOf = {
+  id: t.problems.id,
+  title: t.problems.title,
+  status: t.problems.status,
+};
+
+/** Les dépôts liés à un problème fermé passent derrière les autres. */
+export const closedLast = sql`(${t.problems.status} = 'closed')`;
+
+async function findProblemRow(id: string) {
+  const [p] = await db.select(problemOf).from(t.problems).where(eq(t.problems.id, id));
+  if (!p) throw badRequest("Problème introuvable");
+  return p;
+}
+
 export async function listRepos(query: ListQuery) {
   const filters = [eq(t.repositories.visibility, "public")];
   if (query.type) filters.push(eq(t.repositories.type, query.type));
@@ -158,14 +183,15 @@ export async function listRepos(query: ListQuery) {
     );
   }
   const rows = await db
-    .select({ repo: t.repositories, license: t.licenses, likes: likesOf })
+    .select({ repo: t.repositories, license: t.licenses, likes: likesOf, problem: problemOf })
     .from(t.repositories)
     .innerJoin(t.licenses, eq(t.licenses.id, t.repositories.licenseId))
+    .innerJoin(t.problems, eq(t.problems.id, t.repositories.problemId))
     .where(and(...filters))
-    .orderBy(desc(t.repositories.updatedAt))
+    .orderBy(closedLast, desc(t.repositories.updatedAt))
     .limit(100);
-  return rows.map(({ repo, license, likes }) => ({
-    ...summary(repo),
+  return rows.map(({ repo, license, likes, problem }) => ({
+    ...summary(repo, problem),
     likes,
     license: withRestrictions(license),
   }));
@@ -183,7 +209,10 @@ export async function knownLanguages() {
   return rows.rows.map((r) => r.language);
 }
 
-export function summary(repo: typeof t.repositories.$inferSelect) {
+export function summary(
+  repo: typeof t.repositories.$inferSelect,
+  problem?: { id: string; title: string; status: string } | null,
+) {
   return {
     id: repo.id,
     type: repo.type,
@@ -198,6 +227,9 @@ export function summary(repo: typeof t.repositories.$inferSelect) {
     languages: repo.languages,
     worksOffline: repo.worksOffline,
     targetHardware: repo.targetHardware,
+    stage: repo.stage,
+    problemId: repo.problemId,
+    ...(problem ? { problem } : {}),
     updatedAt: repo.updatedAt,
   };
 }
@@ -205,6 +237,8 @@ export function summary(repo: typeof t.repositories.$inferSelect) {
 export async function createRepo(input: CreateRepo, user: SessionUser) {
   const { org: orgSlug, ...data } = input;
   await getLicense(data.licenseId);
+  // Un problème fermé reste un choix possible : le formulaire prévient de ce que cela implique.
+  const problem = await findProblemRow(data.problemId);
 
   let owner: {
     ownerSlug: string;
@@ -240,7 +274,7 @@ export async function createRepo(input: CreateRepo, user: SessionUser) {
     .insert(t.repositories)
     .values({ ...data, ...owner, createdBy: user.id })
     .returning();
-  return summary(repo);
+  return summary(repo, problem);
 }
 
 export async function repoDetail(
@@ -251,7 +285,12 @@ export async function repoDetail(
 ) {
   const { repo, access } = await findRepo(owner, name, userId);
   const license = withRestrictions(await getLicense(repo.licenseId));
-  const current = version ? await versionByNumber(repo.id, version) : await latestVersion(repo.id);
+  // En construction, hors de l'équipe : README et fiche seulement, ni fichiers ni versions.
+  const current = !access.full
+    ? null
+    : version
+      ? await versionByNumber(repo.id, version)
+      : await latestVersion(repo.id);
   const files = current ? await filesOf(current.id) : [];
   const [{ value: likeCount }] = await db
     .select({ value: count() })
@@ -265,18 +304,15 @@ export async function repoDetail(
           .where(and(eq(t.likes.repoId, repo.id), eq(t.likes.userId, userId)))
       ).length > 0
     : false;
-  const solves = await db
-    .select({
-      id: t.problems.id,
-      title: t.problems.title,
-      status: t.solutions.status,
-    })
-    .from(t.solutions)
-    .innerJoin(t.problems, eq(t.problems.id, t.solutions.problemId))
-    .where(eq(t.solutions.repoId, repo.id));
+  const [problem] = await db
+    .select({ ...problemOf, featuredRepoId: t.problems.featuredRepoId })
+    .from(t.problems)
+    .where(eq(t.problems.id, repo.problemId));
+  const { featuredRepoId, ...problemInfo } = problem;
 
   return {
-    ...summary(repo),
+    ...summary(repo, problemInfo),
+    featured: featuredRepoId === repo.id,
     readme: repo.readme,
     limitations: repo.limitations,
     licenseId: repo.licenseId,
@@ -289,7 +325,6 @@ export async function repoDetail(
     files: files.map(publicFile),
     likes: likeCount,
     liked,
-    solves,
     permissions: access,
   };
 }
@@ -297,12 +332,22 @@ export async function repoDetail(
 export async function updateRepo(owner: string, name: string, input: UpdateRepo, userId: string) {
   const { repo } = await findOwned(owner, name, userId);
   if (input.licenseId) await getLicense(input.licenseId);
-  const [updated] = await db
-    .update(t.repositories)
-    .set({ ...input, updatedAt: new Date() })
-    .where(eq(t.repositories.id, repo.id))
-    .returning();
-  return summary(updated);
+  const problem = await findProblemRow(input.problemId ?? repo.problemId);
+  const [updated] = await db.transaction(async (tx) => {
+    // Changer de problème retire le dépôt de la mise en avant de l'ancien.
+    if (input.problemId && input.problemId !== repo.problemId) {
+      await tx
+        .update(t.problems)
+        .set({ featuredRepoId: null })
+        .where(and(eq(t.problems.id, repo.problemId), eq(t.problems.featuredRepoId, repo.id)));
+    }
+    return tx
+      .update(t.repositories)
+      .set({ ...input, updatedAt: new Date() })
+      .where(eq(t.repositories.id, repo.id))
+      .returning();
+  });
+  return summary(updated, problem);
 }
 
 /* ---------- Collaborateurs ---------- */
@@ -398,7 +443,7 @@ export async function downloadFile(
   version: number | undefined,
   userId?: string,
 ) {
-  const { repo } = await findRepo(owner, name, userId);
+  const { repo } = await findFull(owner, name, userId);
   const current = version ? await versionByNumber(repo.id, version) : await latestVersion(repo.id);
   const file = current ? (await filesOf(current.id)).find((f) => f.path === path) : undefined;
   if (!file) throw notFound("Fichier");
@@ -406,7 +451,7 @@ export async function downloadFile(
 }
 
 export async function listVersions(owner: string, name: string, userId?: string) {
-  const { repo } = await findRepo(owner, name, userId);
+  const { repo } = await findFull(owner, name, userId);
   return db
     .select({
       number: t.repositoryVersions.number,
@@ -466,7 +511,7 @@ async function conflictsOf(repoId: string, baseVersionId: string | null, files: 
 }
 
 export async function listPulls(owner: string, name: string, userId?: string) {
-  const { repo } = await findRepo(owner, name, userId);
+  const { repo } = await findFull(owner, name, userId);
   return db
     .select({
       number: t.pullRequests.number,
@@ -482,7 +527,7 @@ export async function listPulls(owner: string, name: string, userId?: string) {
 }
 
 export async function createPull(owner: string, name: string, input: CreatePull, userId: string) {
-  const { repo } = await findRepo(owner, name, userId);
+  const { repo } = await findFull(owner, name, userId);
   const base = await latestVersion(repo.id);
   const [{ value: last }] = await db
     .select({ value: max(t.pullRequests.number) })
@@ -502,7 +547,7 @@ export async function createPull(owner: string, name: string, input: CreatePull,
 }
 
 export async function pullDetail(owner: string, name: string, number: number, userId?: string) {
-  const { repo, access } = await findRepo(owner, name, userId);
+  const { repo, access } = await findFull(owner, name, userId);
   const pull = await findPull(repo.id, number);
   const files = await pullFiles(pull.id);
   const [author] = await db
@@ -546,7 +591,7 @@ export async function uploadPullFile(
   body: Readable,
   userId: string,
 ) {
-  const { repo } = await findRepo(owner, name, userId);
+  const { repo } = await findFull(owner, name, userId);
   const pull = await findPull(repo.id, number);
   if (pull.status !== "open") throw conflict("Cette pull request n'est plus ouverte");
   if (pull.authorId !== userId) throw forbidden();
@@ -601,10 +646,11 @@ export async function closePull(owner: string, name: string, number: number, use
 }
 
 export async function pullId(owner: string, name: string, number: number, userId?: string) {
-  const { repo } = await findRepo(owner, name, userId);
+  const { repo } = await findFull(owner, name, userId);
   return (await findPull(repo.id, number)).id;
 }
 
+/** Identifiant pour les discussions du dépôt : réservées au contenu complet. */
 export async function repoId(owner: string, name: string, userId?: string) {
-  return (await findRepo(owner, name, userId)).repo.id;
+  return (await findFull(owner, name, userId)).repo.id;
 }

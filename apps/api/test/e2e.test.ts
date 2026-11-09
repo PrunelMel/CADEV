@@ -8,55 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
-
-const API = process.env.API_URL ?? "http://localhost:4000";
-const ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:5173";
-const run = Math.random().toString(36).slice(2, 7);
-
-type Res = { status: number; body: any; headers: Headers }; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-class Client {
-  cookie = "";
-  constructor(readonly username: string) {}
-
-  async req(method: string, path: string, body?: unknown, raw?: BodyInit): Promise<Res> {
-    const headers: Record<string, string> = { Origin: ORIGIN };
-    if (this.cookie) headers.Cookie = this.cookie;
-    if (body !== undefined) headers["Content-Type"] = "application/json";
-    if (raw !== undefined) headers["Content-Type"] = "application/octet-stream";
-    const res = await fetch(`${API}/api${path}`, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : raw,
-    });
-    const set = res.headers.getSetCookie();
-    if (set.length) this.cookie = set.map((c) => c.split(";")[0]).join("; ");
-    const text = await res.text();
-    let parsed: unknown = text;
-    try {
-      parsed = text ? JSON.parse(text) : null;
-    } catch {
-      // corps non JSON (téléchargement de fichier)
-    }
-    return { status: res.status, body: parsed, headers: res.headers };
-  }
-  get = (p: string) => this.req("GET", p);
-  post = (p: string, b: unknown = {}) => this.req("POST", p, b);
-  patch = (p: string, b: unknown) => this.req("PATCH", p, b);
-  put = (p: string, raw: string) => this.req("PUT", p, undefined, raw);
-  del = (p: string) => this.req("DELETE", p);
-
-  async signUp() {
-    const r = await this.post("/auth/sign-up/email", {
-      email: `${this.username}@test.local`,
-      password: "motdepasse123",
-      name: this.username,
-      username: this.username,
-    });
-    assert.equal(r.status, 200, JSON.stringify(r.body));
-    return this;
-  }
-}
+import { Client, run } from "./client.js";
 
 const anon = new Client("anon");
 const alice = new Client(`alice${run}`);
@@ -65,9 +17,18 @@ const carol = new Client(`carol${run}`);
 const org = `labo-${run}`;
 const A = () => alice.username;
 const B = () => bob.username;
+/** Problème auquel les dépôts des tests sont liés : un dépôt n'existe jamais sans problème. */
+let baseProblem = "";
 
 before(async () => {
   await Promise.all([alice.signUp(), bob.signUp(), carol.signUp()]);
+  const p = await alice.post("/problems", {
+    title: `Problème de référence ${run}`,
+    description: "Problème auquel les dépôts créés par les tests sont rattachés.",
+    sector: "Agriculture",
+    country: "Bénin",
+  });
+  baseProblem = p.body.id;
 });
 
 describe("Comptes", () => {
@@ -95,6 +56,7 @@ describe("Comptes", () => {
 
   test("route protégée sans session : 401 au format unique", async () => {
     const r = await anon.post("/repos", {
+      problemId: baseProblem,
       type: "model",
       name: "x",
       licenseId: "mit",
@@ -143,13 +105,17 @@ describe("Organisations", () => {
 describe("Dépôts et droits", () => {
   test("création publique, privée et sous organisation", async () => {
     const pub = await alice.post("/repos", {
+      problemId: baseProblem,
       type: "model",
       name: "manioc-vit",
       licenseId: "mit",
       description: "Détection des maladies du manioc",
+      stage: "solution",
     });
     assert.equal(pub.status, 201);
+    assert.equal(pub.body.problem.id, baseProblem);
     const priv = await alice.post("/repos", {
+      problemId: baseProblem,
       type: "dataset",
       name: "photos-champs",
       licenseId: "cc-by-nc-4.0",
@@ -159,6 +125,7 @@ describe("Dépôts et droits", () => {
     });
     assert.equal(priv.status, 201);
     const orgRepo = await alice.post("/repos", {
+      problemId: baseProblem,
       type: "library",
       name: "outils",
       licenseId: "apache-2.0",
@@ -169,10 +136,51 @@ describe("Dépôts et droits", () => {
     assert.equal(orgRepo.body.owner, org);
   });
 
+  test("un dépôt sans problème, ou avec un problème inconnu, est refusé", async () => {
+    const none = await alice.post("/repos", { type: "model", name: "seul", licenseId: "mit" });
+    assert.equal(none.status, 400);
+    const unknown = await alice.post("/repos", {
+      problemId: "00000000-0000-4000-8000-000000000000",
+      type: "model",
+      name: "seul",
+      licenseId: "mit",
+    });
+    assert.equal(unknown.status, 400);
+  });
+
+  test("en construction : README et fiche seulement hors de l'équipe", async () => {
+    const r = await bob.post("/repos", {
+      problemId: baseProblem,
+      type: "model",
+      name: "brouillon",
+      licenseId: "mit",
+      readme: "# Brouillon\nCe que je prépare.",
+    });
+    assert.equal(r.status, 201);
+    assert.equal(r.body.stage, "under_construction");
+    const base = `/repos/${B()}/brouillon`;
+    assert.equal((await bob.put(`${base}/files/poids.bin`, "bin")).status, 201);
+    const seen = await anon.get(base);
+    assert.equal(seen.status, 200);
+    assert.equal(seen.body.readme, "# Brouillon\nCe que je prépare.");
+    assert.deepEqual(seen.body.files, []);
+    assert.equal(seen.body.version, null);
+    assert.equal(seen.body.permissions.full, false);
+    assert.equal((await anon.get(`${base}/files/poids.bin`)).status, 403);
+    assert.equal((await anon.get(`${base}/versions`)).status, 403);
+    assert.equal((await alice.post(`${base}/pulls`, { title: "Idée" })).status, 403);
+    assert.equal((await alice.get(`${base}/discussions`)).status, 403);
+    const own = await bob.get(base);
+    assert.equal(own.body.files.length, 1, "le propriétaire voit tout");
+    await bob.patch(base, { stage: "solution" });
+    assert.equal((await anon.get(`${base}/files/poids.bin`)).status, 200);
+  });
+
   test("nom en double : 409, licence inconnue : 400", async () => {
     assert.equal(
       (
         await alice.post("/repos", {
+          problemId: baseProblem,
           type: "model",
           name: "manioc-vit",
           licenseId: "mit",
@@ -183,6 +191,7 @@ describe("Dépôts et droits", () => {
     assert.equal(
       (
         await alice.post("/repos", {
+          problemId: baseProblem,
           type: "model",
           name: "z",
           licenseId: "inconnue",
@@ -194,6 +203,7 @@ describe("Dépôts et droits", () => {
 
   test("un non-admin ne crée pas de dépôt dans l'organisation", async () => {
     const r = await bob.post("/repos", {
+      problemId: baseProblem,
       type: "model",
       name: "y",
       licenseId: "mit",
@@ -377,7 +387,7 @@ describe("Problèmes, solutions, contributions", () => {
       description: "Les agriculteurs perdent une partie de leur récolte sans diagnostic rapide.",
       sector: "Agriculture",
       country: "Bénin",
-      connectivityConstraint: "Hors ligne",
+      connectivityConstraint: ["Hors ligne"],
       evaluationCriteria: "Précision sur photos prises au champ",
     });
     assert.equal(r.status, 201);
@@ -388,75 +398,61 @@ describe("Problèmes, solutions, contributions", () => {
     assert.ok(!other.body.some((p: { id: string }) => p.id === problemId));
   });
 
-  test("solution : droits d'écriture, dépôt public, pas de doublon", async () => {
-    assert.equal(
-      (
-        await bob.post(`/problems/${problemId}/solutions`, {
-          repo: `${A()}/manioc-vit`,
-          summary: "Je propose ce modèle",
-        })
-      ).status,
-      403,
-    );
-    await bob.post("/repos", {
+  test("solutions : dépôts publics liés au problème, privés exclus", async () => {
+    const lite = await bob.post("/repos", {
+      problemId,
       type: "model",
       name: "manioc-lite",
       licenseId: "cc-by-nc-4.0",
+      stage: "solution",
+      readme: "# Manioc lite\n\n## Résultats terrain\n\nTesté sur 300 photos à Bohicon.",
     });
-    const s = await bob.post(`/problems/${problemId}/solutions`, {
-      repo: `${B()}/manioc-lite`,
-      summary: "Modèle léger pour téléphone d'entrée de gamme",
-      fieldResults: "Testé sur 300 photos à Bohicon",
+    assert.equal(lite.status, 201);
+    await alice.post("/repos", {
+      problemId,
+      type: "dataset",
+      name: "photos-privees",
+      licenseId: "mit",
+      visibility: "private",
+      stage: "solution",
     });
-    assert.equal(s.status, 201);
-    assert.equal(
-      (
-        await bob.post(`/problems/${problemId}/solutions`, {
-          repo: `${B()}/manioc-lite`,
-          summary: "Encore une fois",
-        })
-      ).status,
-      409,
-    );
-    assert.equal(
-      (
-        await alice.post(`/problems/${problemId}/solutions`, {
-          repo: `${A()}/photos-champs`,
-          summary: "Dépôt privé proposé",
-        })
-      ).status,
-      400,
-    );
+    await carol.post("/repos", {
+      problemId,
+      type: "library",
+      name: "piste",
+      licenseId: "mit",
+    });
+    const d = await anon.get(`/problems/${problemId}`);
+    const names = (xs: { name: string }[]) => xs.map((x) => x.name);
+    assert.deepEqual(names(d.body.solutions.solutions), ["manioc-lite"]);
+    assert.deepEqual(names(d.body.solutions.inProgress), ["piste"]);
+    assert.ok(d.body.solutions.solutions[0].license.restrictions.length > 0);
+    assert.equal(d.body.solutions.featured.by, "community");
   });
 
-  test("seul l'auteur du problème valide", async () => {
-    const detail = await anon.get(`/problems/${problemId}`);
-    const sol = detail.body.solutions[0];
-    assert.ok(sol.license.restrictions.length > 0);
-    assert.equal(
-      (
-        await bob.post(`/solutions/${sol.id}/validate`, {
-          decision: "accepted",
-        })
-      ).status,
-      403,
-    );
-    const ok = await alice.post(`/solutions/${sol.id}/validate`, {
-      decision: "accepted",
-      comment: "Concluant",
-    });
+  test("mise en avant : l'auteur du problème seul, une solution liée seulement", async () => {
+    const path = `/problems/${problemId}/featured`;
+    assert.equal((await bob.req("PUT", path, { repo: `${B()}/manioc-lite` })).status, 403);
+    assert.equal((await alice.req("PUT", path, { repo: `${carol.username}/piste` })).status, 400);
+    const ok = await alice.req("PUT", path, { repo: `${B()}/manioc-lite` });
     assert.equal(ok.status, 200);
-    const after = await alice.get(`/problems/${problemId}`);
-    assert.equal(after.body.solutions[0].status, "accepted");
-    assert.equal(after.body.solutions[0].validations[0].comment, "Concluant");
-    assert.equal(after.body.isAuthor, true);
+    assert.equal(ok.body.featured.by, "author");
+    const reset = await alice.req("PUT", path, { repo: null });
+    assert.equal(reset.body.featured.by, "community");
+    await alice.req("PUT", path, { repo: `${B()}/manioc-lite` });
+    assert.equal((await anon.get(`/repos/${B()}/manioc-lite`)).body.featured, true);
+  });
+
+  test("plus de validation par l'auteur du problème", async () => {
+    assert.equal((await alice.post(`/solutions/x/validate`, { decision: "accepted" })).status, 404);
   });
 
   test("le profil met en avant les problèmes résolus", async () => {
     const p = await anon.get(`/users/${B()}`);
     assert.equal(p.status, 200);
-    assert.equal(p.body.solved.length, 1);
-    assert.equal(p.body.solved[0].problem.id, problemId);
+    const s = p.body.solved.find((x: { problem: { id: string } }) => x.problem.id === problemId);
+    assert.ok(s);
+    assert.equal(s.featured, true);
   });
 
   test("contributions de données", async () => {
@@ -477,10 +473,8 @@ describe("Problèmes, solutions, contributions", () => {
       provenanceCountry: "Bénin",
     });
     assert.equal(c.status, 201);
-    const v = await alice.post(`/contributions/${c.body.id}/validate`, {
-      decision: "rejected",
-    });
-    assert.equal(v.status, 200);
+    const v = await alice.post(`/contributions/${c.body.id}/validate`, { decision: "rejected" });
+    assert.equal(v.status, 404, "personne ne valide une contribution à un problème");
   });
 
   test("discussion sur problème", async () => {
@@ -494,14 +488,15 @@ describe("Problèmes, solutions, contributions", () => {
     const r = await anon.get(`/search?q=${encodeURIComponent("maladies du manioc")}`);
     const p = r.body.problems.find((x: { id: string }) => x.id === problemId);
     assert.ok(p, "le problème doit remonter");
-    assert.equal(p.solutions[0].repo.name, "manioc-lite");
+    assert.equal(p.solutions[0].name, "manioc-lite");
+    assert.equal(p.solutions[0].stage, "solution");
     assert.ok(!r.body.repos.some((x: { name: string }) => x.name === "manioc-lite"));
   });
 
   test("un dépôt rendu privé disparaît des solutions affichées", async () => {
     await bob.patch(`/repos/${B()}/manioc-lite`, { visibility: "private" });
     const d = await anon.get(`/problems/${problemId}`);
-    assert.equal(d.body.solutions.length, 0);
+    assert.equal(d.body.solutions.solutions.length, 0);
     await bob.patch(`/repos/${B()}/manioc-lite`, { visibility: "public" });
   });
 
@@ -515,6 +510,7 @@ describe("Nouveautés : statut, fiche technique, tableau de bord, suggestions", 
 
   test("fiche technique et filtres terrain du hub", async () => {
     const r = await bob.post("/repos", {
+      problemId: baseProblem,
       type: "model",
       name: "transcription-fon",
       licenseId: "mit",
@@ -534,6 +530,7 @@ describe("Nouveautés : statut, fiche technique, tableau de bord, suggestions", 
     const langs = await anon.get("/languages");
     assert.ok(langs.body.includes("Fon"));
     const bad = await bob.post("/repos", {
+      problemId: baseProblem,
       type: "model",
       name: "w",
       licenseId: "mit",
@@ -548,8 +545,8 @@ describe("Nouveautés : statut, fiche technique, tableau de bord, suggestions", 
       description: "Transcrire automatiquement les messages vocaux des producteurs.",
       sector: "Agriculture",
       country: "Bénin",
-      connectivityConstraint: "Hors ligne",
-      languageConstraint: "Fon",
+      connectivityConstraint: ["Hors ligne"],
+      languageConstraint: ["Fon"],
       evaluationCriteria: "Taux d'erreur par mot sous 25 %",
     });
     problemId = p.body.id;
@@ -560,12 +557,16 @@ describe("Nouveautés : statut, fiche technique, tableau de bord, suggestions", 
     assert.ok(hit, "le dépôt doit être suggéré");
     assert.equal(hit.fits.offline, true);
     assert.deepEqual(hit.fits.languages, ["Fon"]);
-    await bob.post(`/problems/${problemId}/solutions`, {
-      repo: `${B()}/transcription-fon`,
-      summary: "Modèle léger hors ligne",
+    // Lié à ce problème, le dépôt n'est plus une suggestion mais une de ses solutions.
+    const moved = await bob.patch(`/repos/${B()}/transcription-fon`, {
+      problemId,
+      stage: "solution",
     });
+    assert.equal(moved.body.problem.id, problemId);
     const after = await anon.get(`/problems/${problemId}/suggestions`);
     assert.ok(!after.body.some(mine));
+    const d = await anon.get(`/problems/${problemId}`);
+    assert.ok(d.body.solutions.solutions.some(mine));
   });
 
   test("tableau de bord : privés, décisions en attente, suivi", async () => {
@@ -574,9 +575,8 @@ describe("Nouveautés : statut, fiche technique, tableau de bord, suggestions", 
     const names = a.body.repos.map((r: { name: string }) => r.name);
     assert.ok(names.includes("photos-champs"), "dépôt privé visible par son propriétaire");
     assert.ok(names.includes("outils"), "dépôt d'organisation administrée");
-    assert.ok(
-      a.body.toReview.solutions.some((x: { problemId: string }) => x.problemId === problemId),
-    );
+    assert.ok(a.body.repos.every((r: { problem: { id: string } }) => r.problem.id));
+    assert.equal(a.body.toReview.solutions, undefined, "plus de décision sur les solutions");
     const c = await carol.get("/me/dashboard");
     assert.ok(
       c.body.repos.some((r: { name: string }) => r.name === "photos-champs"),
@@ -584,7 +584,10 @@ describe("Nouveautés : statut, fiche technique, tableau de bord, suggestions", 
     );
     assert.ok(c.body.mine.contributions.length >= 1);
     const b = await bob.get("/me/dashboard");
-    assert.ok(b.body.mine.solutions.some((x: { problemId: string }) => x.problemId === problemId));
+    assert.ok(
+      b.body.repos.some((r: { problem: { id: string } }) => r.problem.id === problemId),
+      "ses dépôts avec leur problème",
+    );
     assert.equal((await anon.get("/me/dashboard")).status, 401);
   });
 
@@ -608,11 +611,46 @@ describe("Nouveautés : statut, fiche technique, tableau de bord, suggestions", 
     assert.equal(r.status, 400);
   });
 
+  test("fermeture : le propriétaire d'un dépôt lié est notifié, pas l'auteur", async () => {
+    const n = await bob.get("/me/notifications");
+    assert.equal(n.status, 200);
+    const hit = n.body.items.find(
+      (x: { kind: string; problem: { id: string } }) =>
+        x.kind === "problem_closed" && x.problem.id === problemId,
+    );
+    assert.ok(hit, "notification de fermeture");
+    assert.equal(hit.repo.name, "transcription-fon");
+    assert.ok(n.body.unread >= 1);
+    const a = await alice.get("/me/notifications");
+    assert.ok(!a.body.items.some((x: { problem: { id: string } }) => x.problem.id === problemId));
+    const read = await bob.post("/me/notifications/read", { ids: [hit.id] });
+    assert.ok(read.body.items.find((x: { id: string }) => x.id === hit.id).readAt);
+    assert.equal((await anon.get("/me/notifications")).status, 401);
+    // Un dépôt peut encore être lié à un problème fermé.
+    const late = await bob.post("/repos", {
+      problemId,
+      type: "model",
+      name: "tardif",
+      licenseId: "mit",
+    });
+    assert.equal(late.status, 201);
+    assert.equal(late.body.problem.status, "closed");
+  });
+
+  test("le hub range les dépôts d'un problème fermé derrière les autres", async () => {
+    const hub = await anon.get("/repos");
+    const statuses = hub.body.map((r: { problem: { status: string } }) => r.problem.status);
+    const firstClosed = statuses.indexOf("closed");
+    if (firstClosed >= 0)
+      assert.ok(statuses.slice(firstClosed).every((x: string) => x === "closed"));
+  });
+
   test("compteur de solutions cohérent avec la page du problème", async () => {
     const list = await anon.get(`/problems?q=${encodeURIComponent(run)}`);
     for (const p of list.body) {
       const d = await anon.get(`/problems/${p.id}`);
-      assert.equal(p.solutionCount, d.body.solutions.length);
+      assert.equal(p.solutionCount, d.body.solutions.solutions.length);
+      assert.equal(p.inProgressCount, d.body.solutions.inProgress.length);
     }
   });
 });
@@ -626,7 +664,6 @@ describe("Deuxième passe : travaux en cours, carte, garde-fous", () => {
       description: "Les villages riverains sont prévenus trop tard des montées des eaux.",
       sector: "Environnement",
       country: "Bénin",
-      evaluationCriteria: "Alerte au moins 48 heures avant la crue",
     });
     problemId = p.body.id;
   });
@@ -661,7 +698,12 @@ describe("Deuxième passe : travaux en cours, carte, garde-fous", () => {
   });
 
   test("nom de dépôt unique sans tenir compte de la casse", async () => {
-    const r = await alice.post("/repos", { type: "model", name: "Manioc-VIT", licenseId: "mit" });
+    const r = await alice.post("/repos", {
+      problemId: baseProblem,
+      type: "model",
+      name: "Manioc-VIT",
+      licenseId: "mit",
+    });
     assert.equal(r.status, 409);
   });
 

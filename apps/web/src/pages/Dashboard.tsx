@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { Link } from "react-router";
-import { Database, GitPullRequest, Inbox, Plus } from "lucide-react";
+import { GitPullRequest, Inbox, Plus, TriangleAlert } from "lucide-react";
 import { useSession } from "../api/auth";
 import { useDashboard } from "../api/hooks";
-import { RepoList, RepoLink } from "../components/Lists";
+import { RepoList } from "../components/Lists";
 import {
   ButtonLink,
   Card,
@@ -15,9 +15,8 @@ import {
   Tag,
   formatDate,
   problemStatusTone,
-  statusTone,
 } from "../components/ui";
-import { problemStatusLabels, statusLabels } from "../content/site";
+import { problemStatusLabels } from "../content/site";
 
 export function DashboardPage() {
   usePageTitle("Tableau de bord");
@@ -28,7 +27,7 @@ export function DashboardPage() {
     <div className="space-y-8">
       <PageHeader
         title="Tableau de bord"
-        intro="Ce qui attend votre décision, le suivi de vos propositions et tous vos dépôts, privés compris."
+        intro="Les pull requests à traiter, vos dépôts dont le problème est fermé, vos problèmes et tous vos dépôts, privés compris."
         actions={
           <>
             <ButtonLink to="/problemes/nouveau" variant="secondary">
@@ -42,8 +41,9 @@ export function DashboardPage() {
       />
       <Query query={dashboard}>
         {(d) => {
-          const pending =
-            d.toReview.solutions.length + d.toReview.contributions.length + d.toReview.pulls.length;
+          const pending = d.toReview.pulls.length;
+          // Dépôts dont le problème a été fermé : à relier à un autre problème, ou à un nouveau.
+          const orphaned = d.repos.filter((r) => r.problem?.status === "closed");
           return (
             <div className="grid gap-8 lg:grid-cols-2">
               <Section title={`À traiter (${pending})`}>
@@ -51,34 +51,6 @@ export function DashboardPage() {
                   <EmptyState icon={Inbox}>Rien n'attend votre décision.</EmptyState>
                 ) : (
                   <Card className="divide-y divide-neutral-200">
-                    {d.toReview.solutions.map((s) => (
-                      <Row
-                        key={s.id}
-                        to={`/problemes/${s.problemId}`}
-                        kind="Solution à valider"
-                        title={s.problemTitle}
-                        meta={
-                          <>
-                            {s.repo.owner}/{s.repo.name} par {s.submittedBy},{" "}
-                            {formatDate(s.createdAt)}
-                          </>
-                        }
-                      />
-                    ))}
-                    {d.toReview.contributions.map((c) => (
-                      <Row
-                        key={c.id}
-                        to={`/problemes/${c.problemId}`}
-                        kind="Données à valider"
-                        icon={<Database size={14} />}
-                        title={c.problemTitle}
-                        meta={
-                          <>
-                            par {c.contributor}, {formatDate(c.createdAt)}
-                          </>
-                        }
-                      />
-                    ))}
                     {d.toReview.pulls.map((p) => (
                       <Row
                         key={`${p.repo.owner}/${p.repo.name}#${p.number}`}
@@ -96,6 +68,28 @@ export function DashboardPage() {
                   </Card>
                 )}
               </Section>
+
+              {orphaned.length > 0 && (
+                <Section title={`Problème fermé (${orphaned.length})`}>
+                  <p className="text-xs text-neutral-500">
+                    Ces dépôts passent derrière les autres dans le hub et la recherche. Liez-les à
+                    un autre problème, ou publiez-en un nouveau qui explique pourquoi le travail
+                    continue.
+                  </p>
+                  <Card className="divide-y divide-neutral-200">
+                    {orphaned.map((r) => (
+                      <Row
+                        key={r.id}
+                        to={`/${r.owner}/${r.name}?onglet=parametres`}
+                        kind="Problème fermé"
+                        icon={<TriangleAlert size={14} />}
+                        title={`${r.owner}/${r.name}`}
+                        meta={<>Lié à « {r.problem?.title} »</>}
+                      />
+                    ))}
+                  </Card>
+                </Section>
+              )}
 
               <Section title={`Mes problèmes (${d.problems.length})`}>
                 {d.problems.length ? (
@@ -145,48 +139,24 @@ export function DashboardPage() {
                 )}
               </Section>
 
-              <Section title="Mes propositions">
-                {d.mine.solutions.length + d.mine.contributions.length ? (
+              <Section title="Mes contributions de données">
+                {d.mine.contributions.length ? (
                   <Card className="divide-y divide-neutral-200">
-                    {d.mine.solutions.map((s) => (
-                      <div
-                        key={s.id}
-                        className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
-                      >
-                        <div className="min-w-0">
-                          <Link
-                            to={`/problemes/${s.problemId}`}
-                            className="hover:text-accent hover:underline"
-                          >
-                            {s.problemTitle}
-                          </Link>
-                          <div>
-                            <RepoLink {...s.repo} />
-                          </div>
-                        </div>
-                        <Tag tone={statusTone[s.status]}>{statusLabels[s.status]}</Tag>
-                      </div>
-                    ))}
                     {d.mine.contributions.map((c) => (
-                      <div
+                      <Link
                         key={c.id}
-                        className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                        to={`/problemes/${c.problemId}`}
+                        className="block px-4 py-3 text-sm hover:bg-paper"
                       >
-                        <div>
-                          <Link
-                            to={`/problemes/${c.problemId}`}
-                            className="hover:text-accent hover:underline"
-                          >
-                            {c.problemTitle}
-                          </Link>
-                          <p className="text-xs text-neutral-500">Contribution de données</p>
-                        </div>
-                        <Tag tone={statusTone[c.status]}>{statusLabels[c.status]}</Tag>
-                      </div>
+                        <span className="font-medium">{c.problemTitle}</span>
+                        <span className="block text-xs text-neutral-500">
+                          Proposée le {formatDate(c.createdAt)}
+                        </span>
+                      </Link>
                     ))}
                   </Card>
                 ) : (
-                  <EmptyState>Aucune solution ni contribution proposée pour l'instant.</EmptyState>
+                  <EmptyState>Aucune contribution de données pour l'instant.</EmptyState>
                 )}
               </Section>
 
