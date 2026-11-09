@@ -42,7 +42,7 @@ La plupart des gens qui ont besoin d'IA ne savent pas quel modèle chercher. Ils
 
 1. Comptes, organisations simples, dépôts publics et privés, ajout de collaborateurs.
 2. **Hub de solutions** (élément phare) : modèles, datasets, bibliothèques.
-3. Publication de problèmes, publication de solutions, contribution de données et validation.
+3. Publication de problèmes, dépôts liés à un problème (en construction ou solution), solution mise en avant, contribution de données.
 4. Souveraineté : licences, avertissements, provenance des données.
 
 **Exclus**
@@ -65,7 +65,7 @@ La plupart des gens qui ont besoin d'IA ne savent pas quel modèle chercher. Ils
 | Stockage fichiers | MinIO (compatible S3), auto-hébergé via Docker, client `minio` côté API              |
 | Lancement         | `concurrently` depuis la racine                                                      |
 
-Dépendances ajoutées au-delà de la stack imposée : `minio` (client S3), `pg` (pilote Postgres de Drizzle), `tsx` (exécution TypeScript en dev), `@tailwindcss/vite`, `react-markdown` et `remark-gfm` (rendu des fiches Markdown, HTML brut ignoré).
+Dépendances ajoutées au-delà de la stack imposée : `minio` (client S3), `pg` (pilote Postgres de Drizzle), `tsx` (exécution TypeScript en dev), `@tailwindcss/vite`, `react-markdown` et `remark-gfm` (rendu des fiches Markdown, HTML brut ignoré), `framer-motion` (animations de la page de publication et de l'en-tête), `@dnd-kit/core`, `@dnd-kit/sortable` et `@dnd-kit/utilities` (glisser-déposer du concepteur de contribution), `exceljs` (réponses au format XLSX).
 
 ---
 
@@ -88,7 +88,7 @@ Dépendances ajoutées au-delà de la stack imposée : `minio` (client S3), `pg`
 │           ├── modules/     # Un dossier par domaine (routes, schémas Zod, services)
 │           ├── storage/     # Adaptateur MinIO
 │           ├── middleware/  # Session, erreurs
-│           └── lib/         # Droits d'accès, validation, discussions, décisions
+│           └── lib/         # Droits d'accès, validation des entrées, discussions, e-mails
 ├── sdk/                     # SDK Python (à venir)
 ├── docker-compose.yml       # PostgreSQL + MinIO
 ├── package.json             # Scripts racine (workspaces npm)
@@ -154,20 +154,19 @@ Une seule commande démarre Postgres et MinIO (et attend qu'ils soient prêts), 
 
 ## Modèle de données
 
-| Entité                                           | Rôle                                                                                                                                                                     |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `users`, `sessions`, `accounts`, `verifications` | Comptes (gérés par better-auth, plugin nom d'utilisateur)                                                                                                                |
-| `organizations`, `organization_members`          | Organisations simples et leurs membres (admin ou membre)                                                                                                                 |
-| `repositories`                                   | Dépôts : type, visibilité, propriétaire (utilisateur ou organisation), licence, fiche, limites, provenance, fiche technique (tâche, langues, hors ligne, matériel cible) |
-| `repository_collaborators`                       | Collaborateurs d'un dépôt                                                                                                                                                |
-| `repository_versions`, `repository_files`        | Chaque modification crée une version complète ; les fichiers pointent vers le stockage                                                                                   |
-| `pull_requests`, `pull_request_files`            | Propositions de fichiers basées sur une version, fusionnées par le propriétaire ou un collaborateur                                                                      |
-| `problems`                                       | Défis : description, secteur, pays, contraintes terrain, critères d'évaluation, statut (ouvert, résolu, fermé)                                                           |
-| `solutions`                                      | Lien entre un problème et un dépôt public, avec résultats terrain et statut                                                                                              |
-| `data_contributions`                             | Contributions de données à un problème, avec provenance et dataset lié facultatif                                                                                        |
-| `validations`                                    | Historique des décisions sur une solution ou une contribution                                                                                                            |
-| `licenses`                                       | Catalogue de licences avec leurs restrictions                                                                                                                            |
-| `likes`, `discussions`                           | Couche communautaire (discussions sur dépôts, problèmes et pull requests)                                                                                                |
+| Entité                                           | Rôle                                                                                                                                                            |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`, `sessions`, `accounts`, `verifications` | Comptes (gérés par better-auth, plugin nom d'utilisateur)                                                                                                       |
+| `organizations`, `organization_members`          | Organisations simples et leurs membres (admin ou membre)                                                                                                        |
+| `repositories`                                   | Dépôts : problème lié (obligatoire), statut (en construction ou solution), type, visibilité, propriétaire, licence, fiche, limites, provenance, fiche technique |
+| `repository_collaborators`                       | Collaborateurs d'un dépôt                                                                                                                                       |
+| `repository_versions`, `repository_files`        | Chaque modification crée une version complète ; les fichiers pointent vers le stockage                                                                          |
+| `pull_requests`, `pull_request_files`            | Propositions de fichiers basées sur une version, fusionnées par le propriétaire ou un collaborateur                                                             |
+| `problems`                                       | Défis : description, secteur, pays, contraintes terrain, critères d'évaluation, statut (ouvert, résolu, fermé), solution mise en avant                          |
+| `data_contributions`                             | Contributions de données à un problème, avec provenance et dataset lié facultatif                                                                               |
+| `notifications`                                  | Boîte de réception : fermeture ou réouverture du problème d'un de ses dépôts (copiée par e-mail)                                                                |
+| `licenses`                                       | Catalogue de licences avec leurs restrictions                                                                                                                   |
+| `likes`, `discussions`                           | Couche communautaire (discussions sur dépôts, problèmes et pull requests)                                                                                       |
 
 ## API (préfixe `/api`)
 
@@ -184,11 +183,12 @@ Erreurs : `{ error: { code, message, details? } }`. Un dépôt privé inaccessib
 | Likes          | `PUT/DELETE /api/repos/:owner/:name/like`                                                                                                                                                                    |
 | Pull requests  | `GET/POST .../pulls`, `GET .../pulls/:number`, `PUT .../pulls/:number/files/*path`, `POST .../pulls/:number/merge`, `POST .../pulls/:number/close`                                                           |
 | Problèmes      | `GET/POST /api/problems` (filtres `sector`, `country`, `status`, `q`), `GET/PATCH /api/problems/:id`, `GET /api/problems/:id/suggestions`, `PUT/DELETE /api/problems/:id/work`, `GET /api/problem-countries` |
-| Solutions      | `GET/POST /api/problems/:id/solutions`, `POST /api/solutions/:id/validate`                                                                                                                                   |
-| Contributions  | `GET/POST /api/problems/:id/contributions`, `POST /api/contributions/:id/validate`                                                                                                                           |
+| Solutions      | `GET /api/problems/:id/solutions` (solutions, en construction, mise en avant), `PUT /api/problems/:id/featured` (auteur du problème)                                                                         |
+| Contributions  | `GET/POST /api/problems/:id/contributions`                                                                                                                                                                   |
+| Notifications  | `GET /api/me/notifications`, `POST /api/me/notifications/read`                                                                                                                                               |
 | Discussions    | `GET/POST` sur `.../discussions` d'un dépôt, d'un problème ou d'une pull request                                                                                                                             |
 | Licences       | `GET /api/licenses`                                                                                                                                                                                          |
-| Recherche      | `GET /api/search?q=` (plein texte français : problèmes, puis leurs solutions, puis autres dépôts)                                                                                                            |
+| Recherche      | `GET /api/search?q=` (plein texte français : problèmes, puis leurs dépôts liés, puis autres dépôts)                                                                                                          |
 
 ---
 
@@ -210,7 +210,7 @@ Erreurs : `{ error: { code, message, details? } }`. Un dépôt privé inaccessib
 | Nom du projet                       | À fixer                                                                                                    |
 | Stockage fichiers                   | Décidé : MinIO via Docker                                                                                  |
 | Pull requests sur les dépôts        | Décidé : PR simples (fichiers proposés, fusion par propriétaire ou collaborateur, refus en cas de conflit) |
-| Qui valide une solution             | Décidé : l'auteur du problème seul                                                                         |
+| Qui valide une solution             | Décidé : personne ; l'auteur du dépôt le déclare solution, l'auteur du problème choisit la mise en avant   |
 | Rôles et permissions                | Implémentés selon la proposition de `CLAUDE.md`                                                            |
 | Contenu statique                    | Fichiers de données dans `apps/web/src/content/`                                                           |
 | Solution rattachée à un dépôt privé | Refusée pour l'instant (une solution doit être consultable par tous). À confirmer                          |

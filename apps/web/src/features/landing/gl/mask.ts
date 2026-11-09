@@ -10,14 +10,15 @@ export interface LandMask {
   isAfrica: (lon: number, lat: number) => boolean;
 }
 
-// Red channel: all land (Natural Earth 1:110m), used by the globe.
-// Green channel: Africa (1:50m), used by the flat map and the markers.
-export function createLandMask(width = 4096): LandMask {
+/** Draws lon/lat rings on an equirectangular canvas `width` pixels wide. */
+function rasterize(width: number, layers: [number[][], string][], readable: boolean) {
   const height = width / 2;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  // Only the small canvas is read back: a readable canvas lives in CPU memory, which makes
+  // uploading it to the GPU slow.
+  const ctx = canvas.getContext("2d", { willReadFrequently: readable })!;
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, width, height);
 
@@ -40,17 +41,34 @@ export function createLandMask(width = 4096): LandMask {
     }
   };
 
-  fillRings(world as number[][], "#f00");
-  ctx.globalCompositeOperation = "lighter";
-  fillRings(africa as number[][], "#0f0");
+  layers.forEach(([rings, color], i) => {
+    ctx.globalCompositeOperation = i ? "lighter" : "source-over";
+    fillRings(rings, color);
+  });
   ctx.globalCompositeOperation = "source-over";
+  return { canvas, ctx, sx, sy, width, height };
+}
 
-  const pixels = ctx.getImageData(0, 0, width, height).data;
+// Red channel: all land (Natural Earth 1:110m), used by the globe.
+// Green channel: Africa (1:50m), used by the flat map and the markers.
+export function createLandMask(width = 4096): LandMask {
+  const { canvas } = rasterize(
+    width,
+    [
+      [world as number[][], "#f00"],
+      [africa as number[][], "#0f0"],
+    ],
+    false,
+  );
+
+  // Marker placement only needs Africa at low resolution: read back 2 MB instead of 32 MB.
+  const small = rasterize(1024, [[africa as number[][], "#0f0"]], true);
+  const pixels = small.ctx.getImageData(0, 0, small.width, small.height).data;
   const isAfrica = (lon: number, lat: number) => {
-    const x = Math.floor((lon - MASK_RECT.minLon) * sx);
-    const y = Math.floor((MASK_RECT.maxLat - lat) * sy);
-    if (x < 0 || y < 0 || x >= width || y >= height) return false;
-    return pixels[(y * width + x) * 4 + 1] > 127;
+    const x = Math.floor((lon - MASK_RECT.minLon) * small.sx);
+    const y = Math.floor((MASK_RECT.maxLat - lat) * small.sy);
+    if (x < 0 || y < 0 || x >= small.width || y >= small.height) return false;
+    return pixels[(y * small.width + x) * 4 + 1] > 127;
   };
 
   return { canvas, isAfrica };

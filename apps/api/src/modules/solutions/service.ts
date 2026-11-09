@@ -1,85 +1,69 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema as t } from "../../db/index.js";
 import { badRequest, forbidden, notFound } from "../../lib/errors.js";
-import {
-  assertProblemAuthor,
-  recordValidation,
-  validationsFor,
-  type ReviewInput,
-} from "../../lib/review.js";
-import { restrictionsOf } from "../licenses/service.js";
-import { findRepo } from "../repos/service.js";
-import type { SubmitSolution } from "./schemas.js";
+import { withRestrictions } from "../licenses/service.js";
+import { likesOf, summary } from "../repos/service.js";
+import type { SetFeatured } from "./schemas.js";
 
-/** Toutes les tentatives, y compris rejetées : c'est ce qui évite le travail en double. */
+/**
+ * Dépôts publics liés au problème : les solutions d'abord (contenu complet), puis ceux en
+ * construction (README seulement). Un dépôt privé n'apparaît jamais, même marqué « solution ».
+ * La solution mise en avant est celle de l'auteur du problème, sinon la plus aimée.
+ */
 export async function solutionsForProblem(problemId: string) {
-  const rows = await db
-    .select({
-      id: t.solutions.id,
-      summary: t.solutions.summary,
-      fieldResults: t.solutions.fieldResults,
-      status: t.solutions.status,
-      createdAt: t.solutions.createdAt,
-      submittedBy: t.users.username,
-      repo: {
-        owner: t.repositories.ownerSlug,
-        name: t.repositories.name,
-        type: t.repositories.type,
-      },
-      license: t.licenses,
-    })
-    .from(t.solutions)
-    .innerJoin(t.repositories, eq(t.repositories.id, t.solutions.repoId))
-    .innerJoin(t.licenses, eq(t.licenses.id, t.repositories.licenseId))
-    .innerJoin(t.users, eq(t.users.id, t.solutions.submittedBy))
-    .where(and(eq(t.solutions.problemId, problemId), eq(t.repositories.visibility, "public")))
-    .orderBy(desc(t.solutions.createdAt));
-  const history = await validationsFor(
-    "solution",
-    rows.map((r) => r.id),
-  );
-  return rows.map(({ license, ...r }) => ({
-    ...r,
-    license: {
-      id: license.id,
-      name: license.name,
-      restrictions: restrictionsOf(license),
-    },
-    validations: history.get(r.id) ?? [],
-  }));
-}
-
-export async function submitSolution(problemId: string, input: SubmitSolution, userId: string) {
   const [problem] = await db
-    .select({ id: t.problems.id, status: t.problems.status })
+    .select({ featuredRepoId: t.problems.featuredRepoId })
     .from(t.problems)
     .where(eq(t.problems.id, problemId));
   if (!problem) throw notFound("Problème");
-  if (problem.status === "closed")
-    throw badRequest("Ce problème est fermé aux nouvelles propositions");
-  const { repo, access } = await findRepo(input.repo.owner, input.repo.name, userId);
-  if (!access.write) throw forbidden("Vous devez pouvoir écrire sur ce dépôt pour le proposer");
-  if (repo.visibility !== "public") throw badRequest("Seul un dépôt public peut être proposé");
-  const [solution] = await db
-    .insert(t.solutions)
-    .values({
-      problemId,
-      repoId: repo.id,
-      submittedBy: userId,
-      summary: input.summary,
-      fieldResults: input.fieldResults,
-    })
-    .returning();
-  return solution;
+  const rows = await db
+    .select({ repo: t.repositories, license: t.licenses, likes: likesOf })
+    .from(t.repositories)
+    .innerJoin(t.licenses, eq(t.licenses.id, t.repositories.licenseId))
+    .where(and(eq(t.repositories.problemId, problemId), eq(t.repositories.visibility, "public")))
+    .orderBy(desc(likesOf), desc(t.repositories.updatedAt));
+  const items = rows.map(({ repo, license, likes }) => ({
+    ...summary(repo),
+    likes,
+    license: withRestrictions(license),
+  }));
+  const solutions = items.filter((r) => r.stage === "solution");
+  const byAuthor = solutions.find((r) => r.id === problem.featuredRepoId);
+  const featured = byAuthor ?? solutions[0] ?? null;
+  return {
+    featured: featured && { id: featured.id, by: byAuthor ? "author" : "community" },
+    solutions,
+    inProgress: items.filter((r) => r.stage === "under_construction"),
+  };
 }
 
-export async function validateSolution(id: string, input: ReviewInput, userId: string) {
-  const [solution] = await db.select().from(t.solutions).where(eq(t.solutions.id, id));
-  if (!solution) throw notFound("Solution");
-  await assertProblemAuthor(solution.problemId, userId);
-  await db.transaction(async (tx) => {
-    await recordValidation(tx, "solution", id, input, userId);
-    await tx.update(t.solutions).set({ status: input.decision }).where(eq(t.solutions.id, id));
-  });
-  return { id, status: input.decision };
+export async function setFeatured(problemId: string, input: SetFeatured, userId: string) {
+  const [problem] = await db.select().from(t.problems).where(eq(t.problems.id, problemId));
+  if (!problem) throw notFound("Problème");
+  if (problem.authorId !== userId) {
+    throw forbidden("Seul l'auteur du problème choisit la solution mise en avant");
+  }
+  let repoId: string | null = null;
+  if (input.repo) {
+    const [repo] = await db
+      .select()
+      .from(t.repositories)
+      .where(
+        and(
+          eq(t.repositories.ownerSlug, input.repo.owner),
+          eq(t.repositories.name, input.repo.name),
+        ),
+      );
+    if (
+      !repo ||
+      repo.problemId !== problemId ||
+      repo.visibility !== "public" ||
+      repo.stage !== "solution"
+    ) {
+      throw badRequest("Seule une solution publique liée à ce problème peut être mise en avant");
+    }
+    repoId = repo.id;
+  }
+  await db.update(t.problems).set({ featuredRepoId: repoId }).where(eq(t.problems.id, problemId));
+  return solutionsForProblem(problemId);
 }

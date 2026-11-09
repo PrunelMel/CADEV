@@ -1,8 +1,9 @@
-import { and, desc, eq, ilike, notInArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
 import { db, schema as t } from "../../db/index.js";
 import { badRequest, forbidden, notFound } from "../../lib/errors.js";
 import { withRestrictions } from "../licenses/service.js";
 import { contributionsForProblem } from "../contributions/service.js";
+import { notifyProblemStatus } from "../notifications/service.js";
 import { summary } from "../repos/service.js";
 import { solutionsForProblem } from "../solutions/service.js";
 import type { CreateProblem, DeclareWork, ListQuery, UpdateProblem } from "./schemas.js";
@@ -26,9 +27,21 @@ export async function updateProblem(id: string, input: UpdateProblem, userId: st
   if (problem.authorId !== userId) throw forbidden("Seul l'auteur peut modifier ce problème");
   const [updated] = await db
     .update(t.problems)
-    .set({ ...input, updatedAt: new Date() })
+    .set({
+      ...input,
+      updatedAt: new Date(),
+      ...(input.status && input.status !== problem.status
+        ? { closedAt: input.status === "closed" ? new Date() : null }
+        : {}),
+    })
     .where(eq(t.problems.id, id))
     .returning();
+  // Fermer ou rouvrir change la place des dépôts liés : leurs propriétaires sont prévenus.
+  const wasClosed = problem.status === "closed";
+  const isClosed = updated.status === "closed";
+  if (wasClosed !== isClosed) {
+    await notifyProblemStatus(updated, isClosed ? "problem_closed" : "problem_reopened", userId);
+  }
   return updated;
 }
 
@@ -39,19 +52,16 @@ export const problemSummary = {
   country: t.problems.country,
   status: t.problems.status,
   createdAt: t.problems.createdAt,
+  closedAt: t.problems.closedAt,
   author: t.users.username,
 };
 
-/** Solutions comptées comme sur la page du problème : seuls les dépôts publics. */
-const solutionCount = sql<number>`(
-  select count(*)::int from ${t.solutions}
-  join ${t.repositories} r on r.id = ${t.solutions.repoId}
-  where ${t.solutions.problemId} = ${t.problems.id} and r.visibility = 'public')`;
-const acceptedCount = sql<number>`(
-  select count(*)::int from ${t.solutions}
-  join ${t.repositories} r on r.id = ${t.solutions.repoId}
-  where ${t.solutions.problemId} = ${t.problems.id} and r.visibility = 'public'
-  and ${t.solutions.status} = 'accepted')`;
+/** Dépôts publics liés, comptés comme sur la page du problème : solutions, puis en construction. */
+const reposWithStage = (stage: "solution" | "under_construction") => sql<number>`(
+  select count(*)::int from ${t.repositories} r
+  where r.problem_id = ${t.problems.id} and r.visibility = 'public' and r.stage = ${stage})`;
+const solutionCount = reposWithStage("solution");
+const inProgressCount = reposWithStage("under_construction");
 
 export async function listProblems(query: ListQuery) {
   const filters = [];
@@ -63,7 +73,7 @@ export async function listProblems(query: ListQuery) {
     filters.push(or(ilike(t.problems.title, like), ilike(t.problems.description, like)));
   }
   return db
-    .select({ ...problemSummary, solutionCount, acceptedCount })
+    .select({ ...problemSummary, solutionCount, inProgressCount })
     .from(t.problems)
     .innerJoin(t.users, eq(t.users.id, t.problems.authorId))
     .where(and(...filters))
@@ -139,24 +149,13 @@ export function countByCountry() {
     .orderBy(desc(sql`count(*)`));
 }
 
-/** Mots d'une contrainte de langue, pour la comparer aux langues déclarées par les dépôts. */
-const words = (s: string) =>
-  s
-    .toLowerCase()
-    .split(/[^\p{L}]+/u)
-    .filter((w) => w.length > 2);
-
 /**
- * Dépôts publics qui pourraient répondre au problème, pas encore proposés.
+ * Dépôts publics d'autres problèmes qui pourraient aussi répondre à celui-ci.
  * Pertinence plein texte (n'importe quel mot du titre ou de la description),
  * puis compatibilité avec les contraintes terrain posées par l'auteur.
  */
 export async function suggestions(id: string) {
   const problem = await findProblem(id);
-  const proposed = await db
-    .select({ id: t.solutions.repoId })
-    .from(t.solutions)
-    .where(eq(t.solutions.problemId, id));
 
   // plainto_tsquery relie les mots par « & » : on les relie par « | » pour une recherche large.
   // Le sujet vient du titre seul : la description et les langues apportent trop de mots courants.
@@ -172,19 +171,14 @@ export async function suggestions(id: string) {
       and(
         eq(t.repositories.visibility, "public"),
         sql`${doc} @@ ${query}`,
-        proposed.length
-          ? notInArray(
-              t.repositories.id,
-              proposed.map((p) => p.id),
-            )
-          : undefined,
+        ne(t.repositories.problemId, id),
       ),
     )
     .orderBy(desc(rank))
     .limit(20);
 
-  const wantsOffline = problem.connectivityConstraint.trim() !== "";
-  const wanted = new Set(words(problem.languageConstraint));
+  const wantsOffline = problem.connectivityConstraint.length > 0;
+  const wanted = new Set(problem.languageConstraint.map((l) => l.toLowerCase()));
   return rows
     .map(({ repo, license, rank }) => {
       const languageMatches = repo.languages.filter((l) => wanted.has(l.toLowerCase()));

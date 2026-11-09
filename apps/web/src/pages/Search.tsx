@@ -9,9 +9,9 @@ import {
   Section,
   Tag,
   problemStatusTone,
-  statusTone,
+  repoStageTone,
 } from "../components/ui";
-import { problemStatusLabels, repoTypeLabels, statusLabels } from "../content/site";
+import { problemStatusLabels, repoStageLabels, repoTypeLabels } from "../content/site";
 
 export function SearchPage() {
   const [params] = useSearchParams();
@@ -31,7 +31,7 @@ export function SearchPage() {
     <div className="space-y-6">
       <PageHeader
         title={<>Résultats pour « {q} »</>}
-        intro="Les problèmes d'abord, avec les solutions déjà tentées, puis les autres dépôts."
+        intro="Les problèmes d'abord, avec les dépôts qui y répondent, puis les autres dépôts."
       />
       <Query query={result}>
         {({ problems, repos }) => (
@@ -54,12 +54,12 @@ export function SearchPage() {
                         <ul className="space-y-1 pl-4">
                           {p.solutions.map((s) => (
                             <li
-                              key={`${s.repo.owner}/${s.repo.name}`}
+                              key={`${s.owner}/${s.name}`}
                               className="flex flex-wrap items-center gap-2 text-sm"
                             >
-                              <RepoLink {...s.repo} />
-                              <Tag>{repoTypeLabels[s.repo.type]}</Tag>
-                              <Tag tone={statusTone[s.status]}>{statusLabels[s.status]}</Tag>
+                              <RepoLink owner={s.owner} name={s.name} />
+                              <Tag>{repoTypeLabels[s.type]}</Tag>
+                              <Tag tone={repoStageTone[s.stage]}>{repoStageLabels[s.stage]}</Tag>
                             </li>
                           ))}
                         </ul>
@@ -84,8 +84,16 @@ export function SearchPage() {
                 <ul className="space-y-2">
                   {repos.map((r) => (
                     <li key={`${r.owner}/${r.name}`} className="text-sm">
-                      <RepoLink {...r} /> <Tag>{repoTypeLabels[r.type]}</Tag>
+                      <RepoLink owner={r.owner} name={r.name} /> <Tag>{repoTypeLabels[r.type]}</Tag>{" "}
+                      <Tag tone={repoStageTone[r.stage]}>{repoStageLabels[r.stage]}</Tag>
                       {r.description && <p className="text-neutral-700">{r.description}</p>}
+                      <p className="text-xs text-neutral-500">
+                        Répond à{" "}
+                        <Link to={`/problemes/${r.problem.id}`} className="hover:underline">
+                          {r.problem.title}
+                        </Link>
+                        {r.problem.status === "closed" && " (problème fermé)"}
+                      </p>
                     </li>
                   ))}
                 </ul>

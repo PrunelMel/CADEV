@@ -115,7 +115,7 @@ export function Home() {
           </p>
           <p className="text-[#c9d1e0]">
             Décrivez-le en langage courant, avec vos contraintes et vos critères. La communauté s'en
-            charge, et vous gardez la main sur la validation.
+            charge, et vous choisissez la solution mise en avant.
           </p>
         </div>
         <Link

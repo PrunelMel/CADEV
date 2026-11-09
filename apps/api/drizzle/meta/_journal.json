@@ -22,6 +22,34 @@
       "when": 1793362114201,
       "tag": "0002_travaux_en_cours",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793430760902,
+      "tag": "0003_etiquettes_terrain",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793448631172,
+      "tag": "0004_contribution_formulaire",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793638313826,
+      "tag": "0005_date_fermeture",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793990327759,
+      "tag": "0006_depots_problemes",
+      "breakpoints": true
     }
   ]
 }
