@@ -69,8 +69,10 @@ createRoot(document.getElementById("root")!).render(
               <Route path="problemes" element={<ProblemsPage />} />
               <Route path="hub" element={<HubPage />} />
               <Route path="problemes/:id" element={<ProblemDetailPage />} />
-            <Route path=":owner/:name" element={<RepoDetailPage />} />
-            <Route path=":owner/:name/pulls/:number" element={<PullDetailPage />} />
+              <Route path="connexion" element={<SignIn />} />
+              <Route path="inscription" element={<SignUp />} />
+              <Route path=":owner/:name" element={<RepoDetailPage />} />
+              <Route path=":owner/:name/pulls/:number" element={<PullDetailPage />} />
               <Route element={<RequireAuth />}>
                 <Route path="problemes/nouveau" element={<ProblemNewPage />} />
                 <Route path="problemes/:id/modifier" element={<ProblemEditPage />} />
@@ -88,10 +90,8 @@ createRoot(document.getElementById("root")!).render(
               </Route>
               <Route path="orgs/:slug" element={<OrgDetailPage />} />
               <Route path="u/:username" element={<ProfilePage />} />
-              <Route path="connexion" element={<SignIn />} />
-              <Route path="inscription" element={<SignUp />} />
               <Route path="faq" element={<FaqPage />} />
-                  <Route path="*" element={<NotFoundPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>
         </Suspense>

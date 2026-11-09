@@ -184,3 +184,9 @@ Première page harmonisée avec la publication d'un problème et la contribution
 - README pré-rempli à la création d'un dépôt à partir du formulaire (nom, description, problème, type, fiche technique, licence, provenance, sections « Utilisation » et « Résultats terrain »), tant que l'auteur ne l'a pas modifié.
 - Correction : le menu de licence des paramètres ne prend plus la première licence du catalogue avant son chargement (un enregistrement pouvait changer la licence du dépôt).
 - Pièces communes aux fiches à onglets (`components/glass/sections.tsx`) : la fiche d'un problème s'en sert aussi. Anciens composants clairs retirés (`Discussions`, `FileUpload`, `LicenseWarning`).
+
+## Connexion et inscription en charte « Liquid Glass » (9 novembre 2026)
+
+- `/connexion` et `/inscription` : une carte de verre centrée sur le fond marine à l'Afrique en points, avec une bascule animée entre les deux formulaires ; la page d'origine (`?suite=`) suit la bascule et sert de retour après succès.
+- Champs en verre, bouton pour afficher le mot de passe, consignes du nom d'utilisateur et du mot de passe.
+- Messages d'erreur de better-auth traduits en français (`content/auth.ts`) : identifiants incorrects, nom d'utilisateur ou email déjà pris, mot de passe trop court, etc.
