@@ -1,0 +1,64 @@
+# Production sur un seul serveur : seul Caddy est exposé (ports 80 et 443).
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      retries: 20
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    restart: unless-stopped
+    user: "0:0"
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    volumes:
+      - miniodata:/data
+
+  api:
+    build: { context: ., target: api }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Adresses internes au réseau Docker.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      S3_ENDPOINT: minio
+      S3_PORT: "9000"
+      S3_USE_SSL: "false"
+      PORT: "4000"
+      WEB_ORIGIN: https://${DOMAIN}
+      BETTER_AUTH_URL: https://${DOMAIN}
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio: { condition: service_started }
+
+  web:
+    build: { context: ., target: web }
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  miniodata:
+  caddydata:
+  caddyconfig:

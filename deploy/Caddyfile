@@ -1,0 +1,22 @@
+# Un seul domaine : le site et l'API partagent la même origine (cookies de session simples).
+# Caddy obtient et renouvelle seul le certificat HTTPS (Let's Encrypt).
+{$DOMAIN} {
+	encode zstd gzip
+
+	# API (dont l'authentification /api/auth/*). Envois de fichiers : jusqu'à 500 Mo.
+	handle /api/* {
+		request_body {
+			max_size 520MB
+		}
+		reverse_proxy api:4000
+	}
+
+	# Front : fichiers statiques ; toute autre adresse renvoie index.html (routes du front).
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		try_files {path} /index.html
+		file_server
+	}
+}

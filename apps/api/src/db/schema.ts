@@ -30,6 +30,8 @@ export const users = pgTable("users", {
   image: text("image"),
   username: text("username").unique(),
   displayUsername: text("display_username"),
+  // Code envoyé par e-mail à chaque connexion (plugin twoFactor de better-auth) : activé pour tous.
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -68,6 +70,17 @@ export const verifications = pgTable("verifications", {
   expiresAt: ts("expires_at").notNull(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
+});
+
+/** Table attendue par le plugin twoFactor (codes TOTP, désactivés ici : seul le code par e-mail sert). */
+export const twoFactors = pgTable("two_factors", {
+  id: text("id").primaryKey(),
+  secret: text("secret").notNull(),
+  backupCodes: text("backup_codes").notNull(),
+  userId: userRef("user_id").notNull(),
+  verified: boolean("verified").notNull().default(true),
+  failedVerificationCount: integer("failed_verification_count").notNull().default(0),
+  lockedUntil: ts("locked_until"),
 });
 
 /* ---------- Organisations ---------- */

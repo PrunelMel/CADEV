@@ -50,6 +50,13 @@
       "when": 1793990327759,
       "tag": "0006_depots_problemes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794246790279,
+      "tag": "0007_code_par_email",
+      "breakpoints": true
     }
   ]
 }

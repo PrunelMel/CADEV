@@ -1,18 +1,35 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { username } from "better-auth/plugins";
+import { emailOTP, twoFactor, username } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
 import { env } from "../env.js";
+import { sendCode } from "../lib/mail.js";
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: [env.WEB_ORIGIN],
   database: drizzleAdapter(db, { provider: "pg", schema, usePlural: true }),
-  emailAndPassword: { enabled: true },
-  plugins: [username()],
+  // Un code envoyé par e-mail confirme l'adresse à l'inscription, puis termine chaque connexion.
+  emailAndPassword: { enabled: true, requireEmailVerification: true },
+  emailVerification: { sendOnSignUp: true, sendOnSignIn: true, autoSignInAfterVerification: true },
+  plugins: [
+    username(),
+    emailOTP({
+      overrideDefaultEmailVerification: true,
+      expiresIn: 600,
+      sendVerificationOTP: ({ email, otp }) => sendCode(email, otp, "inscription"),
+    }),
+    twoFactor({
+      totpOptions: { disable: true },
+      otpOptions: {
+        period: 10,
+        sendOTP: ({ user, otp }) => sendCode(user.email, otp, "connexion"),
+      },
+    }),
+  ],
   databaseHooks: {
     user: {
       create: {
@@ -25,6 +42,8 @@ export const auth = betterAuth({
             .from(schema.organizations)
             .where(eq(schema.organizations.slug, name));
           if (org) throw new APIError("BAD_REQUEST", { message: "Nom d'utilisateur déjà pris" });
+          // Le code par e-mail à la connexion vaut pour tout nouveau compte.
+          return { data: { ...user, twoFactorEnabled: true } };
         },
       },
     },
