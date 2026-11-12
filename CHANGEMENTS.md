@@ -190,3 +190,20 @@ Première page harmonisée avec la publication d'un problème et la contribution
 - `/connexion` et `/inscription` : une carte de verre centrée sur le fond marine à l'Afrique en points, avec une bascule animée entre les deux formulaires ; la page d'origine (`?suite=`) suit la bascule et sert de retour après succès.
 - Champs en verre, bouton pour afficher le mot de passe, consignes du nom d'utilisateur et du mot de passe.
 - Messages d'erreur de better-auth traduits en français (`content/auth.ts`) : identifiants incorrects, nom d'utilisateur ou email déjà pris, mot de passe trop court, etc.
+
+## Code par e-mail à l'inscription et à la connexion (9 novembre 2026)
+
+- Inscription : un code à 6 chiffres, envoyé par e-mail, confirme l'adresse ; aucune session avant la confirmation (`emailAndPassword.requireEmailVerification`, plugin `emailOTP`). La confirmation ouvre la session.
+- Connexion : après le mot de passe, un code envoyé par e-mail termine la connexion (plugin `twoFactor`, codes par e-mail seulement, sans application d'authentification). Valable 10 minutes, nouveau code sur demande, essais limités par better-auth.
+- Formulaire en deux étapes dans la même carte (« Confirmez votre adresse », « Code de connexion »), saisie du code adaptée au téléphone (`one-time-code`), « Renvoyer le code », « Retour » ; erreurs traduites (`content/auth.ts`).
+- E-mails envoyés par Resend depuis `MAIL_FROM` (domaine vérifié), en texte et en HTML. Rien n'est envoyé vers les adresses en `.local`.
+- Migration `0007_code_par_email` : table `two_factors` attendue par le plugin, colonne `users.two_factor_enabled`. Comptes existants : adresse considérée comme vérifiée ; code à la connexion activé pour les adresses réelles, pas pour les adresses fictives en `.local` (démo, tests). `npm run db:demo` crée ses comptes vérifiés, sans code.
+- Tests : `npm test` charge `.env` pour lire les codes en base ; 64 tests, dont l'inscription sans session avant le code et la connexion refusée sans code ou avec un mauvais code.
+
+## Déploiement en production (11 novembre 2026)
+
+- `Dockerfile` en plusieurs étapes : image `api` (API compilée, dépendances d'exécution seulement, utilisateur non root) et image `web` (Caddy avec le front construit).
+- `docker-compose.prod.yml` : PostgreSQL et MinIO joignables seulement depuis le réseau Docker, API, Caddy exposé sur 80 et 443 (HTTPS automatique, envois jusqu'à 500 Mo, cache long pour les fichiers du front, routes du front renvoyées vers `index.html`). Redémarrage automatique.
+- `deploy/Caddyfile`, `.env.production.example`, `.dockerignore`.
+- `apps/api/src/db/migrate.ts` : applique les migrations sans drizzle-kit (`node dist/db/migrate.js` dans le conteneur).
+- Section « Déploiement » du README.

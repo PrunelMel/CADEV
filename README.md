@@ -152,6 +152,24 @@ Une seule commande démarre Postgres et MinIO (et attend qu'ils soient prêts), 
 
 ---
 
+## Déploiement (production)
+
+Un seul serveur avec Docker. `docker-compose.prod.yml` lance PostgreSQL, MinIO, l'API compilée et Caddy, seul service exposé (ports 80 et 443). Caddy sert le site, transmet `/api` à l'API et gère le certificat HTTPS tout seul.
+
+```bash
+# Sur le serveur, une fois le DNS du domaine pointé vers son adresse IP
+curl -fsSL https://get.docker.com | sh
+git clone https://github.com/PrunelMel/CADEV.git /opt/plateforme && cd /opt/plateforme
+cp .env.production.example .env        # remplir : domaine, mots de passe, secrets, Resend
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec api node dist/db/migrate.js
+docker compose -f docker-compose.prod.yml exec api node dist/db/seed.js   # catalogue de licences
+```
+
+Mise à jour : `git pull`, puis la commande `up -d --build` et `migrate.js` ci-dessus.
+
+---
+
 ## Modèle de données
 
 | Entité                                           | Rôle                                                                                                                                                            |

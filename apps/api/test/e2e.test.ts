@@ -8,7 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
-import { Client, run } from "./client.js";
+import { Client, run, signInCode, signUpCode } from "./client.js";
 
 const anon = new Client("anon");
 const alice = new Client(`alice${run}`);
@@ -43,15 +43,47 @@ describe("Comptes", () => {
     assert.notEqual(r.status, 200);
   });
 
-  test("connexion par nom d'utilisateur", async () => {
+  test("connexion : mot de passe seul insuffisant, puis code reçu par e-mail", async () => {
     const c = new Client(A());
     const r = await c.post("/auth/sign-in/username", {
       username: A(),
       password: "motdepasse123",
     });
     assert.equal(r.status, 200);
+    assert.equal(r.body.twoFactorRedirect, true);
+    assert.equal((await c.get("/me/namespaces")).status, 401, "pas de session avant le code");
+    assert.equal((await c.post("/auth/two-factor/send-otp")).status, 200);
+    const bad = await c.post("/auth/two-factor/verify-otp", { code: "000000" });
+    assert.notEqual(bad.status, 200, "un mauvais code est refusé");
+    const ok = await c.post("/auth/two-factor/verify-otp", { code: await signInCode(A()) });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
     const me = await c.get("/me/namespaces");
     assert.equal(me.body.username, A());
+  });
+
+  test("inscription : pas de session avant la confirmation de l'adresse", async () => {
+    const d = new Client(`dora${run}`);
+    const r = await d.post("/auth/sign-up/email", {
+      email: d.email,
+      password: "motdepasse123",
+      name: "Dora",
+      username: d.username,
+    });
+    assert.equal(r.status, 200);
+    assert.equal((await d.get("/me/namespaces")).status, 401);
+    const blocked = await d.post("/auth/sign-in/username", {
+      username: d.username,
+      password: "motdepasse123",
+    });
+    assert.equal(blocked.status, 403, "adresse non confirmée");
+    const bad = await d.post("/auth/email-otp/verify-email", { email: d.email, otp: "000000" });
+    assert.notEqual(bad.status, 200);
+    const ok = await d.post("/auth/email-otp/verify-email", {
+      email: d.email,
+      otp: await signUpCode(d.email),
+    });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.equal((await d.get("/me/namespaces")).body.username, d.username);
   });
 
   test("route protégée sans session : 401 au format unique", async () => {

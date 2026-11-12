@@ -7,7 +7,7 @@
  * Sans effet si les comptes de démo existent déjà. Mot de passe de tous les comptes : demo-cadev-2026
  */
 import { Readable } from "node:stream";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { auth } from "../auth/index.js";
 import { storage } from "../storage/index.js";
 import { db } from "./index.js";
@@ -42,6 +42,12 @@ async function main() {
     });
     id[p.username] = res.user.id;
   }
+  // Adresses fictives (@demo.local) : aucun code ne peut leur parvenir. Comptes vérifiés d'office,
+  // sans code à la connexion, pour la démonstration.
+  await db
+    .update(t.users)
+    .set({ emailVerified: true, twoFactorEnabled: false })
+    .where(inArray(t.users.id, Object.values(id)));
 
   const [org] = await db
     .insert(t.organizations)
