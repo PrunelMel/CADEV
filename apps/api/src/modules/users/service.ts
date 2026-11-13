@@ -1,5 +1,7 @@
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { auth } from "../../auth/index.js";
 import { db, schema as t } from "../../db/index.js";
+import { conflict, forbidden } from "../../lib/errors.js";
 import { userByUsername } from "../orgs/service.js";
 import { closedLast, problemOf, summary } from "../repos/service.js";
 
@@ -173,4 +175,66 @@ export async function dashboard(userId: string) {
     toReview: { pulls: openPulls },
     mine: { contributions: myContributions },
   };
+}
+
+/* ---------- Inscriptions en attente du code ---------- */
+
+/** Délai pour confirmer son adresse ; passé ce délai, le compte est supprimé (nom et adresse libérés). */
+export const PENDING_SIGNUP_TTL_HOURS = 24;
+
+/**
+ * Corrige l'adresse d'un compte pas encore confirmé, puis envoie un code à la nouvelle adresse.
+ * Réponse identique si l'adresse ou le mot de passe ne correspondent pas : on ne révèle pas
+ * quelles adresses ont un compte.
+ */
+export async function changePendingEmail(input: {
+  email: string;
+  password: string;
+  newEmail: string;
+}) {
+  const email = input.email.toLowerCase();
+  const newEmail = input.newEmail.toLowerCase();
+  const [row] = await db
+    .select({ id: t.users.id, verified: t.users.emailVerified, hash: t.accounts.password })
+    .from(t.users)
+    .innerJoin(
+      t.accounts,
+      and(eq(t.accounts.userId, t.users.id), eq(t.accounts.providerId, "credential")),
+    )
+    .where(eq(t.users.email, email));
+  const ctx = await auth.$context;
+  const ok =
+    row &&
+    !row.verified &&
+    row.hash &&
+    (await ctx.password.verify({ hash: row.hash, password: input.password }));
+  if (!ok) throw forbidden("Adresse ou mot de passe incorrect");
+
+  if (newEmail !== email) {
+    const [taken] = await db
+      .select({ id: t.users.id })
+      .from(t.users)
+      .where(eq(t.users.email, newEmail));
+    if (taken) throw conflict("Cette adresse est déjà utilisée par un autre compte");
+    await db
+      .update(t.users)
+      .set({ email: newEmail, updatedAt: new Date() })
+      .where(eq(t.users.id, row.id));
+    // L'ancien code ne doit plus servir.
+    await db
+      .delete(t.verifications)
+      .where(eq(t.verifications.identifier, `email-verification-otp-${email}`));
+  }
+  await auth.api.sendVerificationOTP({ body: { email: newEmail, type: "email-verification" } });
+  return { email: newEmail };
+}
+
+/** Supprime les comptes jamais confirmés après le délai : leur nom d'utilisateur redevient libre. */
+export async function purgePendingSignups() {
+  const limit = new Date(Date.now() - PENDING_SIGNUP_TTL_HOURS * 3600 * 1000);
+  const removed = await db
+    .delete(t.users)
+    .where(and(eq(t.users.emailVerified, false), lt(t.users.createdAt, limit)))
+    .returning({ id: t.users.id });
+  return removed.length;
 }

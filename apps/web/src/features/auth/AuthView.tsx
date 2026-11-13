@@ -10,6 +10,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, MailCheck, TriangleAlert } from "lucide-react";
 import { authClient, useSession } from "../../api/auth";
+import { useChangePendingEmail } from "../../api/hooks";
 import { Backdrop } from "../../components/glass/formKit";
 import { DISPLAY, Glass, INK, INK2, INK3, SOFT_SPRING } from "../../components/glass/Glass";
 import { FIELD, GlassButton, Labelled } from "../../components/glass/sections";
@@ -20,7 +21,7 @@ import { usePageTitle } from "../../hooks/usePageTitle";
 type Mode = "connexion" | "inscription";
 type AuthError = { code?: string; message?: string } | null;
 /** Deuxième étape : confirmer l'adresse (inscription) ou terminer la connexion. */
-type Step = { kind: "adresse"; email: string } | { kind: "connexion" };
+type Step = { kind: "adresse"; email: string; password: string } | { kind: "connexion" };
 
 const messageOf = (error: AuthError) =>
   (error?.code && authErrors[error.code]) || authErrorFallback;
@@ -58,7 +59,7 @@ export function AuthView({ mode }: { mode: Mode }) {
       });
       setPending(false);
       if (error) setError(messageOf(error));
-      else setStep({ kind: "adresse", email: v.email });
+      else setStep({ kind: "adresse", email: v.email, password: v.password });
       return;
     }
     const { data, error } = v.login.includes("@")
@@ -67,7 +68,7 @@ export function AuthView({ mode }: { mode: Mode }) {
     if (error?.code === "EMAIL_NOT_VERIFIED" && v.login.includes("@")) {
       // Adresse jamais confirmée : le serveur vient d'envoyer un nouveau code.
       setPending(false);
-      setStep({ kind: "adresse", email: v.login });
+      setStep({ kind: "adresse", email: v.login, password: v.password });
       return;
     }
     if (error) {
@@ -258,6 +259,25 @@ function CodeStep({
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [code, setCode] = useState("");
+  // L'adresse peut être corrigée sur place si elle a été mal saisie.
+  const [email, setEmail] = useState(step.kind === "adresse" ? step.email : "");
+  const [editing, setEditing] = useState(false);
+  const change = useChangePendingEmail();
+
+  async function changeEmail(newEmail: string) {
+    if (step.kind !== "adresse") return;
+    setError(null);
+    setNotice(null);
+    try {
+      const r = await change.mutateAsync({ email, password: step.password, newEmail });
+      setEmail(r.email);
+      setEditing(false);
+      setCode("");
+      setNotice(`Nouveau code envoyé à ${r.email}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : authErrorFallback);
+    }
+  }
 
   async function verify(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -265,7 +285,7 @@ function CodeStep({
     setError(null);
     const { error } =
       step.kind === "adresse"
-        ? await authClient.emailOtp.verifyEmail({ email: step.email, otp: code })
+        ? await authClient.emailOtp.verifyEmail({ email, otp: code })
         : await authClient.twoFactor.verifyOtp({ code });
     setPending(false);
     if (error) setError(messageOf(error));
@@ -277,10 +297,7 @@ function CodeStep({
     setNotice(null);
     const { error } =
       step.kind === "adresse"
-        ? await authClient.emailOtp.sendVerificationOtp({
-            email: step.email,
-            type: "email-verification",
-          })
+        ? await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" })
         : await authClient.twoFactor.sendOtp();
     if (error) setError(messageOf(error));
     else setNotice("Nouveau code envoyé.");
@@ -308,14 +325,31 @@ function CodeStep({
           Entrez le code à 6 chiffres envoyé{" "}
           {step.kind === "adresse" ? (
             <>
-              à <b className={`font-semibold ${INK}`}>{step.email}</b>
+              à <b className={`font-semibold ${INK}`}>{email}</b>
             </>
           ) : (
             "à l’adresse e-mail de votre compte"
           )}
           . Il est valable 10 minutes.
         </p>
+        {step.kind === "adresse" && !editing && (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-[13.5px] font-semibold text-[color:var(--accent-text)] underline"
+          >
+            Adresse mal saisie ? Modifier l’adresse
+          </button>
+        )}
       </div>
+      {editing && (
+        <EmailFix
+          current={email}
+          pending={change.isPending}
+          onCancel={() => setEditing(false)}
+          onSubmit={changeEmail}
+        />
+      )}
       <Field label="Code">
         <input
           name="code"
@@ -356,6 +390,59 @@ function CodeStep({
         </button>
       </div>
     </Glass>
+  );
+}
+
+/**
+ * Correction de l'adresse, dans la carte du code (pas de formulaire imbriqué : la carte en est un).
+ * Entrée valide la nouvelle adresse.
+ */
+function EmailFix({
+  current,
+  pending,
+  onCancel,
+  onSubmit,
+}: {
+  current: string;
+  pending: boolean;
+  onCancel: () => void;
+  onSubmit: (email: string) => void;
+}) {
+  const [value, setValue] = useState(current);
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
+  const send = () => valid && value.trim() !== current && onSubmit(value.trim());
+  return (
+    <div className="space-y-3 rounded-[20px] bg-[color:var(--chip)] p-4">
+      <Field label="Adresse e-mail corrigée">
+        <input
+          type="email"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              send();
+            }
+          }}
+          autoComplete="email"
+          autoFocus
+          className={`${FIELD} h-12 ${INK}`}
+        />
+      </Field>
+      <div className="flex flex-wrap gap-2">
+        <GlassButton
+          primary
+          type="button"
+          disabled={pending || !valid || value.trim() === current}
+          onClick={send}
+        >
+          {pending ? "Envoi…" : "Envoyer le code à cette adresse"}
+        </GlassButton>
+        <GlassButton type="button" onClick={onCancel}>
+          Annuler
+        </GlassButton>
+      </div>
+    </div>
   );
 }
 

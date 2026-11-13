@@ -22,6 +22,17 @@ export async function lastCode(sql: string, param: string) {
   }
 }
 
+/** Requête SQL directe (préparation de cas de test impossibles à créer par l'API). */
+export async function sql(text: string, param: string) {
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  try {
+    await db.query(text, [param]);
+  } finally {
+    await db.end();
+  }
+}
+
 /** Code de confirmation d'adresse envoyé à l'inscription. */
 export const signUpCode = (email: string) =>
   lastCode(

@@ -207,3 +207,11 @@ Première page harmonisée avec la publication d'un problème et la contribution
 - `deploy/Caddyfile`, `.env.production.example`, `.dockerignore`.
 - `apps/api/src/db/migrate.ts` : applique les migrations sans drizzle-kit (`node dist/db/migrate.js` dans le conteneur).
 - Section « Déploiement » du README.
+
+## Inscription : adresse mal saisie (13 novembre 2026)
+
+Retour d'un testeur : une faute dans l'adresse (« .con ») bloquait l'inscription, et le nom d'utilisateur restait pris par le compte jamais confirmé.
+
+- Étape du code : lien « Adresse mal saisie ? Modifier l'adresse ». La nouvelle adresse remplace l'ancienne et reçoit un nouveau code, sans tout recommencer ni perdre le nom d'utilisateur (`POST /api/account/pending-email` ; le mot de passe saisi à l'inscription, gardé par le formulaire, prouve la demande). Refusé pour une adresse déjà confirmée ou déjà utilisée par un autre compte.
+- Inscriptions jamais confirmées : supprimées au bout de 24 heures (au démarrage de l'API, puis toutes les heures), ce qui libère le nom d'utilisateur et l'adresse (`PENDING_SIGNUP_TTL_HOURS`).
+- Tests : 66, dont la correction d'adresse et la suppression d'une inscription expirée.
