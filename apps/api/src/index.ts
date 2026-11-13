@@ -14,6 +14,7 @@ import { reposRouter } from "./modules/repos/routes.js";
 import { searchRouter } from "./modules/search/routes.js";
 import { solutionsRouter } from "./modules/solutions/routes.js";
 import { usersRouter } from "./modules/users/routes.js";
+import { purgePendingSignups } from "./modules/users/service.js";
 import { storage } from "./storage/index.js";
 
 const app = express();
@@ -50,3 +51,11 @@ app.use(errorHandler);
 
 await storage.init();
 app.listen(env.PORT, () => console.log(`API sur http://localhost:${env.PORT}/api`));
+
+// Inscriptions jamais confirmées : nettoyées au démarrage, puis toutes les heures.
+const purge = () =>
+  purgePendingSignups()
+    .then((n) => n && console.log(`${n} inscription(s) non confirmée(s) supprimée(s).`))
+    .catch((e: unknown) => console.error("Nettoyage des inscriptions :", e));
+void purge();
+setInterval(purge, 3600 * 1000).unref();

@@ -7,8 +7,10 @@
  * Chaque exécution crée ses propres comptes (suffixe aléatoire) : pas besoin de vider la base.
  */
 import assert from "node:assert/strict";
-import { before, describe, test } from "node:test";
-import { Client, run, signInCode, signUpCode } from "./client.js";
+import { after, before, describe, test } from "node:test";
+import { db } from "../src/db/index.js";
+import { purgePendingSignups } from "../src/modules/users/service.js";
+import { Client, run, signInCode, signUpCode, sql } from "./client.js";
 
 const anon = new Client("anon");
 const alice = new Client(`alice${run}`);
@@ -19,6 +21,9 @@ const A = () => alice.username;
 const B = () => bob.username;
 /** Problème auquel les dépôts des tests sont liés : un dépôt n'existe jamais sans problème. */
 let baseProblem = "";
+
+// Le nettoyage des inscriptions est appelé directement : sa connexion à la base est fermée à la fin.
+after(() => db.$client.end());
 
 before(async () => {
   await Promise.all([alice.signUp(), bob.signUp(), carol.signUp()]);
@@ -84,6 +89,67 @@ describe("Comptes", () => {
     });
     assert.equal(ok.status, 200, JSON.stringify(ok.body));
     assert.equal((await d.get("/me/namespaces")).body.username, d.username);
+  });
+
+  test("inscription : adresse mal saisie corrigée sans perdre le nom d'utilisateur", async () => {
+    const e = new Client(`emma${run}`);
+    const typo = `emma${run}@typo.local`;
+    const r = await e.post("/auth/sign-up/email", {
+      email: typo,
+      password: "motdepasse123",
+      name: "Emma",
+      username: e.username,
+    });
+    assert.equal(r.status, 200);
+    const bad = await e.post("/account/pending-email", {
+      email: typo,
+      password: "mauvais",
+      newEmail: e.email,
+    });
+    assert.equal(bad.status, 403);
+    const taken = await e.post("/account/pending-email", {
+      email: typo,
+      password: "motdepasse123",
+      newEmail: alice.email,
+    });
+    assert.equal(taken.status, 409, "adresse d'un autre compte refusée");
+    const ok = await e.post("/account/pending-email", {
+      email: typo,
+      password: "motdepasse123",
+      newEmail: e.email,
+    });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    const v = await e.post("/auth/email-otp/verify-email", {
+      email: e.email,
+      otp: await signUpCode(e.email),
+    });
+    assert.equal(v.status, 200, JSON.stringify(v.body));
+    assert.equal((await e.get("/me/namespaces")).body.username, e.username);
+    // Une fois confirmée, l'adresse ne se change plus par cette voie.
+    const late = await e.post("/account/pending-email", {
+      email: e.email,
+      password: "motdepasse123",
+      newEmail: `autre${run}@test.local`,
+    });
+    assert.equal(late.status, 403);
+  });
+
+  test("inscription jamais confirmée : supprimée après 24 h, nom d'utilisateur libéré", async () => {
+    const f = new Client(`fanta${run}`);
+    await f.post("/auth/sign-up/email", {
+      email: `fanta${run}@test.local`,
+      password: "motdepasse123",
+      name: "Fanta",
+      username: f.username,
+    });
+    await sql(
+      `update users set created_at = now() - interval '25 hours' where username = $1`,
+      f.username,
+    );
+    assert.ok((await purgePendingSignups()) >= 1);
+    const again = new Client(f.username);
+    await again.signUp();
+    assert.equal((await again.get("/me/namespaces")).body.username, f.username);
   });
 
   test("route protégée sans session : 401 au format unique", async () => {

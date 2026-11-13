@@ -80,6 +80,13 @@ export const useMarkRead = () =>
     ["notifications"],
   );
 
+/** Inscription en attente du code : corrige l'adresse (mot de passe de l'inscription requis). */
+export const useChangePendingEmail = () =>
+  useMutation({
+    mutationFn: (input: { email: string; password: string; newEmail: string }) =>
+      api<{ email: string }>("/account/pending-email", { json: input }),
+  });
+
 export const useDashboard = (enabled: boolean) =>
   useQuery({
     queryKey: ["dashboard"],
