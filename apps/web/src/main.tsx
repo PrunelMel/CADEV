@@ -79,17 +79,15 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="problemes/:id/concevoir" element={<ContributionDesignPage />} />
                 <Route path="problemes/:id/contribuer" element={<ContributePage />} />
                 <Route path="nouveau-depot" element={<RepoNewPage />} />
-              </Route>
-            </Route>
-            <Route element={<Layout />}>
-              <Route path="accueil" element={<Home />} />
-              <Route path="recherche" element={<SearchPage />} />
-              <Route element={<RequireAuth />}>
                 <Route path="tableau-de-bord" element={<DashboardPage />} />
                 <Route path="orgs/nouvelle" element={<OrgNewPage />} />
               </Route>
               <Route path="orgs/:slug" element={<OrgDetailPage />} />
               <Route path="u/:username" element={<ProfilePage />} />
+            </Route>
+            <Route element={<Layout />}>
+              <Route path="accueil" element={<Home />} />
+              <Route path="recherche" element={<SearchPage />} />
               <Route path="faq" element={<FaqPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
