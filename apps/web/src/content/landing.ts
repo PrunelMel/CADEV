@@ -192,35 +192,10 @@ export const closing = {
   titleText: "Rejoignez la communauté.",
 };
 
-/** Pied de page : liens vers l'application. Le nom vient de site.ts. `logo` : chemin dans /public, ou null. */
+/** Pied de page : marque, slogan et mention. Le nom vient de site.ts. `logo` : chemin dans /public, ou null. */
 export const footer = {
   name: site.name,
   logo: null as string | null,
   tagline: "L'IA appliquée pour l'Afrique, par les développeurs, pour les développeurs.",
-  columns: [
-    {
-      title: "Plateforme",
-      links: [
-        { label: "Problèmes", href: "/problemes" },
-        { label: "Hub de solutions", href: "/hub" },
-        { label: "Recherche", href: "/accueil" },
-      ],
-    },
-    {
-      title: "Communauté",
-      links: [
-        { label: "Rejoindre la communauté", href: "/inscription" },
-        { label: "Publier un problème", href: "/problemes/nouveau" },
-        { label: "Connexion", href: "/connexion" },
-      ],
-    },
-    {
-      title: "À propos",
-      links: [
-        { label: "Questions fréquentes", href: "/faq" },
-        { label: "Souveraineté des données", href: "/faq" },
-      ],
-    },
-  ],
   legal: `© 2026 ${site.name}. Projet présenté à la Coupe CAdev 2026.`,
 };

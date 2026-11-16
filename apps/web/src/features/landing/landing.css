@@ -592,34 +592,14 @@ body:has(.landing) {
   font-size: 14px;
   line-height: 1.6;
 }
-.landing .footer__cols {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 48px 72px;
-}
-.landing .footer__col-title {
-  margin: 0 0 14px;
-  font: 500 12px/1 var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.landing .footer__col ul,
 .landing .footer__socials {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.landing .footer__col li + li {
-  margin-top: 10px;
-}
 .landing .footer a {
   color: var(--ink);
   text-decoration: none;
-}
-.landing .footer__col a {
-  font-size: 15px;
-  color: #c3cbdb;
 }
 .landing .footer a:hover {
   color: #fff;
