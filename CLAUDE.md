@@ -6,6 +6,8 @@ Instructions pour Claude Code sur ce dépôt. Lire ce fichier en entier avant to
 
 Plateforme communautaire d'IA appliquée pour l'Afrique : un hub de modèles, datasets et bibliothèques inspiré de Hugging Face, organisé autour des **problèmes réels** (défis) et non des modèles, avec la **souveraineté des données** comme comportement de la plateforme. MVP pour la Coupe CAdev 2026.
 
+Nom provisoire de la communauté : **BHEM AI COMMUNITY**, défini dans `apps/web/src/content/site.ts` (front) et repris dans les e-mails (`MAIL_FROM`, `lib/mail.ts`).
+
 Le contexte complet (vision, périmètre, stack) est dans `README.md`.
 
 ## Règle numéro un : demander avant de trancher

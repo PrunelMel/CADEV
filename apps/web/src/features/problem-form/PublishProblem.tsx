@@ -1,5 +1,5 @@
 /**
- * Publier (ou modifier) un problème : charte « Plateforme IA appliquée » (fond marine, carte
+ * Publier (ou modifier) un problème : charte « BHEM AI COMMUNITY » (fond marine, carte
  * d'Afrique en points, titres condensés, accent lavande), matériau « Liquid Glass ».
  *
  * Architecture : chaque champ du formulaire déclare le panneau contextuel qu'il ouvre dans la

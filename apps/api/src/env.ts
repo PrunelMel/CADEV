@@ -18,7 +18,7 @@ const schema = z.object({
   MAX_UPLOAD_MB: z.coerce.number().default(500),
   // E-mails de notification (Resend). Sans clé, les notifications restent dans la boîte de réception.
   RESEND_API_KEY: z.string().optional(),
-  MAIL_FROM: z.string().default("Plateforme IA appliquée <onboarding@resend.dev>"),
+  MAIL_FROM: z.string().default("BHEM AI COMMUNITY <onboarding@resend.dev>"),
 });
 
 export const env = schema.parse(process.env);

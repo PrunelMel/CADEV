@@ -115,7 +115,7 @@ export function renderCsv(records: SubmissionRecord[], columns: Columns) {
 
 async function renderXlsx(config: FormConfig, records: SubmissionRecord[], columns: Columns) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Plateforme IA appliquée";
+  wb.creator = "BHEM AI COMMUNITY";
   const ws = wb.addWorksheet("Réponses", { views: [{ state: "frozen", ySplit: 1 }] });
   ws.columns = columns.all.map((c) => ({
     header: c,

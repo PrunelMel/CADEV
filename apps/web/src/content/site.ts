@@ -5,7 +5,7 @@ import { africanCountries } from "./countries";
 import { sectorOptions } from "./problem-form";
 
 export const site = {
-  name: "Plateforme IA appliquée",
+  name: "BHEM AI COMMUNITY",
   tagline: "Une plateforme d'échange pour les développeurs, par les développeurs.",
   intro:
     "Décrivez ce qui ne marche pas chez vous. La communauté propose des modèles, des jeux de données et des bibliothèques, testés sur le terrain et jugés sur vos critères.",

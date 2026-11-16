@@ -1,4 +1,6 @@
-# Plateforme communautaire d'IA appliquée (Afrique)
+# BHEM AI COMMUNITY
+
+Plateforme communautaire d'IA appliquée pour l'Afrique (nom provisoire de la communauté : BHEM AI COMMUNITY).
 
 Une plateforme d'échange pour les développeurs, par les développeurs. Projet présenté à la Coupe CAdev 2026.
 

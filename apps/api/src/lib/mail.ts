@@ -36,8 +36,8 @@ export function sendCode(to: string, code: string, purpose: "inscription" | "con
       : `${code} : votre code de connexion`;
   const intro =
     purpose === "inscription"
-      ? "Voici le code pour confirmer votre adresse e-mail et activer votre compte sur la Plateforme IA appliquée :"
-      : "Voici le code pour terminer votre connexion à la Plateforme IA appliquée :";
+      ? "Voici le code pour confirmer votre adresse e-mail et activer votre compte sur BHEM AI COMMUNITY :"
+      : "Voici le code pour terminer votre connexion à BHEM AI COMMUNITY :";
   const outro =
     "Il est valable 10 minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : sans ce code, personne ne peut se connecter à votre compte.";
   const text = [intro, "", code, "", outro].join("\n");
