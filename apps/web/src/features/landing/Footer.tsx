@@ -37,21 +37,6 @@ export function Footer() {
           </Link>
           <p className="footer__tagline">{footer.tagline}</p>
         </div>
-
-        <nav className="footer__cols" aria-label="Pied de page">
-          {footer.columns.map((col) => (
-            <div key={col.title} className="footer__col">
-              <p className="footer__col-title">{col.title}</p>
-              <ul>
-                {col.links.map((l) => (
-                  <li key={l.label}>
-                    <Link to={l.href}>{l.label}</Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </nav>
       </div>
 
       <div className="footer__bottom">
