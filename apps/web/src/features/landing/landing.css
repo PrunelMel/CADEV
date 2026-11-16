@@ -170,36 +170,52 @@ body:has(.landing) {
   margin-top: 36px;
 }
 
+/* Boutons de la charte « Liquid Glass » (mêmes valeurs que CTA_FILL et .pp-field dans
+   components/glass) : pastille de 48 px, action principale blanc cassé, secondaire en verre. */
 .landing .btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 44px;
+  height: 48px;
   padding: 0 20px;
-  border-radius: 10px;
+  border-radius: 999px;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
   transition:
-    background 0.2s,
-    border-color 0.2s,
-    transform 0.2s;
+    background-color 0.25s,
+    border-color 0.25s,
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.landing .btn:active {
+  transform: scale(0.95);
 }
 
 .landing .btn--primary {
-  background: var(--ink);
-  color: var(--bg);
+  padding: 0 24px;
+  color: #0a0d16;
+  background: linear-gradient(180deg, #f5f6fa, #e1e4ec);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 10px 28px -14px rgba(233, 234, 239, 0.6);
 }
 .landing .btn--primary:hover {
-  transform: translateY(-1px);
+  transform: scale(1.04);
+}
+.landing .btn--primary:active {
+  transform: scale(0.95);
 }
 .landing .btn--ghost {
-  color: var(--ink);
-  border: 1px solid var(--line);
-  background: rgba(12, 18, 34, 0.5);
+  color: #e9eaef;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 .landing .btn--ghost:hover {
-  border-color: rgba(148, 163, 190, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .landing .hero__hint {
@@ -612,11 +628,14 @@ body:has(.landing) {
 .landing .footer a:hover {
   color: #fff;
 }
-.landing .footer a:focus-visible,
-.landing .btn:focus-visible {
+.landing .footer a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
   border-radius: 4px;
+}
+.landing .btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 .landing .footer__bottom {
   display: flex;
