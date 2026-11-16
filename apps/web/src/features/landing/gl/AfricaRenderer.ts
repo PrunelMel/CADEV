@@ -40,6 +40,8 @@ interface View {
 
 const DEG = 180 / Math.PI;
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+/** Idle rotation speed of the opening globe, in degrees per second (a full turn in 40 s). */
+const SPIN_SPEED = 9;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const logLerp = (a: number, b: number, t: number) => Math.exp(lerp(Math.log(a), Math.log(b), t));
 const smooth = (a: number, b: number, x: number) => {
@@ -67,6 +69,8 @@ export class AfricaRenderer {
   private start = performance.now();
   private last = performance.now();
   private target = 0;
+  /** Idle turn of the opening globe, in degrees of longitude. */
+  private spin = 0;
   private progress = 0;
   private width = 1;
   private height = 1;
@@ -149,6 +153,14 @@ export class AfricaRenderer {
     // Time based, so it feels the same at 30, 60 or 120 fps.
     this.progress += (this.target - this.progress) * (1 - Math.exp(-dt * 5.5));
     if (Math.abs(this.target - this.progress) < 0.0001) this.progress = this.target;
+
+    // The opening globe turns on its own, eastward, slowing down as the scroll takes over the
+    // turn. Wrapped to ±180° only at the very top, where a full turn is invisible.
+    if (!this.opts.reducedMotion) {
+      const turn = easeInOutCubic(clamp01(this.progress / mapConfig.timeline.rotateEnd));
+      this.spin -= SPIN_SPEED * dt * (1 - turn);
+      if (this.progress === 0) this.spin = ((((this.spin + 180) % 360) + 360) % 360) - 180;
+    }
     this.opts.onFrame?.(this.progress);
 
     const view = this.view(this.progress, time);
@@ -213,7 +225,7 @@ export class AfricaRenderer {
       // The globe turns in place beside the text, then slides to the center
       // only in the last 30% of the turn, once the first section has faded.
       const slide = easeInOutCubic(clamp01((p / rotateEnd - 0.7) / 0.3));
-      const idle = this.opts.reducedMotion ? 0 : 7 * Math.sin(time * 0.12) * (1 - t);
+      const idle = this.spin * (1 - t);
       return {
         lon: lerp(mapConfig.globeStart.lon, mid.lon, t) + idle,
         lat: lerp(mapConfig.globeStart.lat, mid.lat, t),

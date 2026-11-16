@@ -1,5 +1,5 @@
-import { Activity, ArrowRight, ChevronDown, Radio } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { Activity, ArrowRight, ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import {
   closing,
   HERO_VH,
@@ -120,20 +120,6 @@ export function Hero() {
     };
   }, [webgl]);
 
-  /** Hero button: scroll down to where the final call to action is shown. */
-  const goToJoin = (e: MouseEvent) => {
-    e.preventDefault();
-    const section = sectionRef.current;
-    const join = sections.find((s) => s.id === "join");
-    if (!section || !join) return;
-    const total = section.offsetHeight - window.innerHeight;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({
-      top: section.offsetTop + total * Math.min(1, join.show[0] + 0.08),
-      behavior: reduced ? "auto" : "smooth",
-    });
-  };
-
   return (
     <section
       ref={sectionRef}
@@ -149,17 +135,13 @@ export function Hero() {
         )}
 
         <div ref={introRef} className="hero__intro fade">
-          <p className="hero__eyebrow">
-            <Radio size={14} strokeWidth={2} />
-            {heroCopy.eyebrow}
-          </p>
           <Lockup as="h1" />
           <div className="hero__actions">
-            <a className="btn btn--primary" href="#join" onClick={goToJoin}>
+            <a className="btn btn--primary" href={heroCopy.joinHref} onPointerMove={sheen}>
               {heroCopy.joinCta}
               <ArrowRight size={16} strokeWidth={2} />
             </a>
-            <a className="btn btn--ghost" href={heroCopy.exploreHref}>
+            <a className="btn btn--ghost" href={heroCopy.exploreHref} onPointerMove={sheen}>
               {heroCopy.exploreCta}
             </a>
           </div>
@@ -184,14 +166,19 @@ export function Hero() {
 
         <div ref={closingRef} className="hero__closing fade">
           <p className="story__label">{closing.label}</p>
-          <Lockup as="h2" />
-          <p className="story__text">{closing.text}</p>
+          <h2 className="stitle stitle--block" aria-label={closing.titleText}>
+            {closing.lines.map((l) => (
+              <span
+                key={l.text}
+                className={l.block ? "stitle__blk" : "stitle__pl"}
+                aria-hidden="true"
+              >
+                {l.text}
+              </span>
+            ))}
+          </h2>
           <div className="hero__actions">
-            <a className="btn btn--primary" href={heroCopy.joinHref}>
-              {heroCopy.joinCta}
-              <ArrowRight size={16} strokeWidth={2} />
-            </a>
-            <a className="btn btn--ghost" href={heroCopy.exploreHref}>
+            <a className="btn btn--ghost" href={heroCopy.exploreHref} onPointerMove={sheen}>
               {heroCopy.exploreCta}
             </a>
           </div>
@@ -260,12 +247,6 @@ function Story({ section }: { section: StorySection }) {
         )}
       </h2>
       <p className="story__text">{section.text}</p>
-      {section.cta && (
-        <a className="btn btn--primary story__cta" href={heroCopy.joinHref}>
-          {section.cta}
-          <ArrowRight size={16} strokeWidth={2} />
-        </a>
-      )}
     </div>
   );
 }
@@ -340,4 +321,12 @@ function Lockup({ as: Tag }: { as: "h1" | "h2" }) {
       </span>
     </Tag>
   );
+}
+
+/** Reflet des boutons qui suit le pointeur, comme sur les surfaces de verre (components/glass). */
+function sheen(e: PointerEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  el.style.setProperty("--my", `${e.clientY - r.top}px`);
 }
