@@ -9,7 +9,6 @@ export const HERO_VH = 1320;
 const at = (vh: number) => vh / HERO_VH;
 
 export const heroCopy = {
-  eyebrow: "Une communauté à travers l'Afrique",
   /** Hero lockup: top line, big word on the left, box on the right (top 30%), accent line (rest). */
   title: {
     full: "L'IA dont l'Afrique a besoin sera bâtie par nous.",
@@ -100,7 +99,6 @@ export interface StorySection {
   /** Full sentence, read by screen readers instead of the split title. */
   titleText: string;
   text: string;
-  cta?: string;
   placement: "left" | "top";
   show: [number, number];
 }
@@ -144,7 +142,6 @@ export const sections: StorySection[] = [
     },
     titleText: "La prochaine avancée ne viendra pas de loin. Elle viendra de nous.",
     text: "Rejoignez les développeurs qui bâtissent l’IA appliquée de l’Afrique, ensemble, un vrai problème à la fois.",
-    cta: "Rejoindre la communauté",
     placement: "left",
     show: [at(563), at(704)],
   },
@@ -190,7 +187,9 @@ export const statusSwitch = at(782);
 export const closing = {
   show: [at(1230), at(4000)] as [number, number],
   label: "Nous rejoindre",
-  text: "Rejoignez les développeurs qui bâtissent l’IA appliquée de l’Afrique, ensemble, un vrai problème à la fois.",
+  /** Titre court, même style que les sections : lignes simples puis une ligne sur bandeau lavande. */
+  lines: [{ text: "Rejoignez" }, { text: "la communauté.", block: true }],
+  titleText: "Rejoignez la communauté.",
 };
 
 /** Pied de page : liens vers l'application. Le nom vient de site.ts. `logo` : chemin dans /public, ou null. */

@@ -86,25 +86,6 @@ body:has(.landing) {
   align-items: flex-start;
 }
 
-.landing .hero__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 28px;
-  padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  font: 500 12px/1 var(--mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-  background: rgba(12, 18, 34, 0.6);
-}
-
-.landing .hero__eyebrow svg {
-  color: var(--green);
-}
-
 /* Lockup, built like the reference:
    THE AI AFRICA            fitted to the width of the row below (Hero.tsx)
    NEEDS | [ WILL BE    ]   box = top 30% of the height
@@ -189,6 +170,30 @@ body:has(.landing) {
 }
 .landing .btn:active {
   transform: scale(0.95);
+}
+/* Reflet qui suit le pointeur (--mx / --my posés par Hero.tsx), comme sur les surfaces de verre. */
+.landing .btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.landing .btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    160px circle at var(--mx, 50%) var(--my, 0%),
+    rgba(176, 170, 255, 0.22),
+    transparent 72%
+  );
+}
+.landing .btn:hover::before {
+  opacity: 0.9;
 }
 
 .landing .btn--primary {
@@ -380,9 +385,6 @@ body:has(.landing) {
   line-height: 1.65;
   color: #b7c0d2;
 }
-.landing .story__cta {
-  margin-top: 8px;
-}
 
 /* Title style 1, "Never look back": words on a color block, plain lines around them. */
 .landing .stitle {
@@ -528,9 +530,6 @@ body:has(.landing) {
 .landing .hero__closing .hero__actions {
   margin-top: 8px;
 }
-.landing .hero__closing .story__text {
-  max-width: 420px;
-}
 
 @media (max-aspect-ratio: 23/20) {
   .landing .hero__closing {
@@ -540,9 +539,6 @@ body:has(.landing) {
     right: 16px;
     max-width: none;
     gap: 18px;
-  }
-  .landing .hero__closing .story__text {
-    max-width: none;
   }
 }
 
