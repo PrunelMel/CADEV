@@ -28,7 +28,7 @@ function DotMark() {
 
 export function Footer() {
   return (
-    <footer id="next" className="footer">
+    <footer id="next" className="footer glow">
       <div className="footer__inner">
         <div className="footer__brand">
           <Link className="footer__logo" to="/problemes">

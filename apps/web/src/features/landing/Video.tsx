@@ -40,7 +40,11 @@ export function Video() {
   };
 
   return (
-    <section ref={ref} className={`vid${shown ? " vid--in" : ""}`} aria-labelledby="vid-title">
+    <section
+      ref={ref}
+      className={`vid${shown ? " vid--in" : ""}${started ? "" : " glow"}`}
+      aria-labelledby="vid-title"
+    >
       <div className="vid__inner">
         <div className="vid__copy">
           <h2 id="vid-title" className="stitle stitle--block" aria-label={video.titleText}>
