@@ -31,7 +31,7 @@ export function Footer() {
     <footer id="next" className="footer">
       <div className="footer__inner">
         <div className="footer__brand">
-          <Link className="footer__logo" to="/accueil">
+          <Link className="footer__logo" to="/problemes">
             {footer.logo ? <img src={footer.logo} alt="" height={28} /> : <DotMark />}
             <span>{footer.name}</span>
           </Link>
@@ -43,7 +43,7 @@ export function Footer() {
         <p>{footer.legal}</p>
         <ul className="footer__socials">
           <li>
-            <Link to="/accueil">
+            <Link to="/problemes">
               Entrer dans la plateforme
               <ArrowRight size={14} strokeWidth={2} />
             </Link>

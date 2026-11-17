@@ -112,7 +112,7 @@ export function GlassHeader() {
     const q = String(new FormData(e.currentTarget).get("q") ?? "").trim();
     if (q) navigate(`/recherche?q=${encodeURIComponent(q)}`);
   }
-  const signOut = () => authClient.signOut().then(() => navigate("/accueil"));
+  const signOut = () => authClient.signOut().then(() => navigate("/problemes"));
   const initial = (session?.user.name || username || "?").charAt(0).toUpperCase();
 
   return (
@@ -125,8 +125,8 @@ export function GlassHeader() {
         <Glass
           lens
           as={MotionLink}
-          to="/accueil"
-          aria-label={`${site.name}, accueil`}
+          to="/problemes"
+          aria-label={`${site.name}, liste des problèmes`}
           whileHover={{ y: -2, scale: 1.03 }}
           whileTap={{ scale: 0.95 }}
           transition={SPRING}

@@ -22,7 +22,7 @@ export const heroCopy = {
   joinHref: "/inscription",
   /** Accès direct à l'application, sans compte. */
   exploreCta: "Explorer les problèmes",
-  exploreHref: "/accueil",
+  exploreHref: "/problemes",
   scrollHint: "Faites défiler",
   statusTitle: "État du réseau",
   statusRegionWest: "Afrique de l'Ouest",
