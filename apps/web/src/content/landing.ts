@@ -192,6 +192,26 @@ export const closing = {
   titleText: "Rejoignez la communauté.",
 };
 
+/**
+ * Vidéo de présentation, entre l'animation du globe et le pied de page.
+ * Déposer les fichiers dans apps/web/public/video/ :
+ * - presentation.mp4 (obligatoire ; H.264 + AAC, 1080p, de préférence sous 40 Mo) ;
+ * - presentation.jpg (facultatif ; image d'attente 1920x1080, sinon la première image de la vidéo) ;
+ * - presentation.vtt (facultatif ; sous-titres français).
+ * Tant que presentation.mp4 est absent, la section ne s'affiche pas.
+ */
+export const video = {
+  lines: [{ text: "Découvrez" }, { text: "le projet.", block: true }],
+  titleText: "Découvrez le projet.",
+  text: "Comment un problème du terrain devient une solution partagée, en quelques minutes.",
+  src: "/video/presentation.mp4",
+  /** Chemin de l'image d'attente, ou null pour la première image de la vidéo. */
+  poster: null as string | null,
+  /** Chemin des sous-titres WebVTT, ou null. */
+  captions: null as string | null,
+  playLabel: "Regarder la présentation",
+};
+
 /** Pied de page : marque, slogan et mention. Le nom vient de site.ts. `logo` : chemin dans /public, ou null. */
 export const footer = {
   name: site.name,

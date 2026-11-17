@@ -542,6 +542,152 @@ body:has(.landing) {
   }
 }
 
+/* ------------------------------------------------------------------ video */
+
+/* Après le globe : même grille de points que le pied de page, fondue vers le haut. */
+.landing .vid {
+  position: relative;
+  padding: clamp(72px, 12vh, 140px) clamp(16px, 6vw, 96px);
+  background:
+    radial-gradient(var(--dot) 1px, transparent 1.4px) 0 0 / 18px 18px,
+    var(--bg);
+}
+.landing .vid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    var(--bg) 0%,
+    rgba(8, 12, 24, 0.82) 30%,
+    rgba(8, 12, 24, 0.9)
+  );
+}
+.landing .vid__inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.5fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 80px);
+  max-width: 1440px;
+  margin: 0 auto;
+}
+.landing .vid__copy {
+  display: grid;
+  gap: 18px;
+  justify-items: start;
+}
+.landing .vid__copy .story__text {
+  max-width: 380px;
+}
+
+/* Cadre éclairé à la lavande, comme l'atmosphère du globe. */
+.landing .vid__frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #0c1222;
+  box-shadow:
+    0 0 0 1px rgba(163, 151, 247, 0.22),
+    0 0 60px -12px rgba(110, 140, 255, 0.35),
+    0 40px 80px -40px rgba(0, 0, 0, 0.8);
+}
+.landing .vid__player {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #0c1222;
+}
+
+/* Avant la lecture : voile sombre, bouton lecture et libellé au centre. */
+.landing .vid__play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink);
+  background: radial-gradient(closest-side, rgba(8, 12, 24, 0.25), rgba(8, 12, 24, 0.7));
+  font: inherit;
+}
+.landing .vid__play-dot {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  padding-left: 4px;
+  border-radius: 999px;
+  color: #0a0d16;
+  background: linear-gradient(180deg, #f5f6fa, #e1e4ec);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 10px rgba(163, 151, 247, 0.16),
+    0 14px 34px -12px rgba(233, 234, 239, 0.6);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.landing .vid__play:hover .vid__play-dot {
+  transform: scale(1.06);
+}
+.landing .vid__play:active .vid__play-dot {
+  transform: scale(0.95);
+}
+.landing .vid__play-label {
+  pointer-events: none;
+}
+.landing .vid__play:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+  border-radius: 24px;
+}
+
+/* Apparition quand la section entre à l'écran. */
+.landing .vid__copy,
+.landing .vid__frame {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.landing .vid__frame {
+  transition-delay: 0.12s;
+}
+.landing .vid--in .vid__copy,
+.landing .vid--in .vid__frame {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing .vid__copy,
+  .landing .vid__frame {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Téléphones et écrans en portrait : titre au-dessus, vidéo pleine largeur. */
+@media (max-aspect-ratio: 23/20), (max-width: 860px) {
+  .landing .vid__inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .landing .vid__play-dot {
+    width: 60px;
+    height: 60px;
+  }
+  .landing .vid__frame {
+    border-radius: 18px;
+  }
+}
+
 /* ------------------------------------------------------------------ footer */
 
 .landing .footer {
