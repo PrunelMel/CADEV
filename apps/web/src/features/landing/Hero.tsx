@@ -1,5 +1,5 @@
 import { Activity, ArrowRight, ChevronDown } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   closing,
   HERO_VH,
@@ -127,7 +127,7 @@ export function Hero() {
       style={{ height: `${HERO_VH}vh` }}
       aria-label="Communauté africaine d'IA appliquée"
     >
-      <div ref={stageRef} className={`hero__stage${webgl ? "" : " hero__stage--poster"}`}>
+      <div ref={stageRef} className={`hero__stage glow${webgl ? "" : " hero__stage--poster"}`}>
         {webgl ? (
           <canvas ref={canvasRef} className="hero__canvas" aria-hidden="true" />
         ) : (
@@ -137,11 +137,11 @@ export function Hero() {
         <div ref={introRef} className="hero__intro fade">
           <Lockup as="h1" />
           <div className="hero__actions">
-            <a className="btn btn--primary" href={heroCopy.joinHref} onPointerMove={sheen}>
+            <a className="btn btn--primary" href={heroCopy.joinHref}>
               {heroCopy.joinCta}
               <ArrowRight size={16} strokeWidth={2} />
             </a>
-            <a className="btn btn--ghost" href={heroCopy.exploreHref} onPointerMove={sheen}>
+            <a className="btn btn--ghost" href={heroCopy.exploreHref}>
               {heroCopy.exploreCta}
             </a>
           </div>
@@ -178,7 +178,7 @@ export function Hero() {
             ))}
           </h2>
           <div className="hero__actions">
-            <a className="btn btn--ghost" href={heroCopy.exploreHref} onPointerMove={sheen}>
+            <a className="btn btn--ghost" href={heroCopy.exploreHref}>
               {heroCopy.exploreCta}
             </a>
           </div>
@@ -190,7 +190,7 @@ export function Hero() {
         </div>
 
         {webgl && (
-          <aside ref={statusRef} className="hero__status fade">
+          <aside ref={statusRef} className="hero__status glow fade">
             {(["west", "south"] as const).map((r) => (
               <div key={r} className={`hero__status-layer hero__status-layer--${r}`}>
                 <p className="hero__status-title">
@@ -321,12 +321,4 @@ function Lockup({ as: Tag }: { as: "h1" | "h2" }) {
       </span>
     </Tag>
   );
-}
-
-/** Reflet des boutons qui suit le pointeur, comme sur les surfaces de verre (components/glass). */
-function sheen(e: PointerEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  el.style.setProperty("--mx", `${e.clientX - r.left}px`);
-  el.style.setProperty("--my", `${e.clientY - r.top}px`);
 }

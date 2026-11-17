@@ -542,6 +542,28 @@ body:has(.landing) {
   }
 }
 
+/* Lueur qui suit le pointeur sur une zone (.glow), même reflet que les boutons et les pages en
+   verre ; --mx / --my posés par Landing.tsx. Au-dessus du contenu, en mode « screen ». */
+.landing .glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    220px circle at var(--mx, 50%) var(--my, 0%),
+    rgba(176, 170, 255, 0.16),
+    transparent 72%
+  );
+}
+.landing .glow:hover::after {
+  opacity: 1;
+}
+
 /* ------------------------------------------------------------------ video */
 
 /* Après le globe : même grille de points que le pied de page, fondue vers le haut. */
