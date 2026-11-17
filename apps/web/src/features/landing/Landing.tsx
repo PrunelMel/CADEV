@@ -20,9 +20,12 @@ export function Landing() {
  * reçoit la position du pointeur (--mx / --my), lue par son dégradé dans landing.css.
  */
 function trackGlow(e: PointerEvent<HTMLElement>) {
-  const el = (e.target as Element).closest<HTMLElement>(".btn, .glow");
-  if (!el) return;
-  const r = el.getBoundingClientRect();
-  el.style.setProperty("--mx", `${e.clientX - r.left}px`);
-  el.style.setProperty("--my", `${e.clientY - r.top}px`);
+  // Toutes les zones sous le pointeur (un bouton dans la scène du globe, par exemple) le suivent.
+  let el = (e.target as Element).closest<HTMLElement>(".btn, .glow");
+  while (el) {
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    el.style.setProperty("--my", `${e.clientY - r.top}px`);
+    el = el.parentElement?.closest<HTMLElement>(".btn, .glow") ?? null;
+  }
 }

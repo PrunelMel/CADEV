@@ -127,7 +127,7 @@ export function Hero() {
       style={{ height: `${HERO_VH}vh` }}
       aria-label="Communauté africaine d'IA appliquée"
     >
-      <div ref={stageRef} className={`hero__stage${webgl ? "" : " hero__stage--poster"}`}>
+      <div ref={stageRef} className={`hero__stage glow${webgl ? "" : " hero__stage--poster"}`}>
         {webgl ? (
           <canvas ref={canvasRef} className="hero__canvas" aria-hidden="true" />
         ) : (

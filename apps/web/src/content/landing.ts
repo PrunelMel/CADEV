@@ -196,7 +196,7 @@ export const closing = {
  * Vidéo de présentation, entre l'animation du globe et le pied de page.
  * Déposer les fichiers dans apps/web/public/video/ :
  * - presentation.mp4 (obligatoire ; H.264 + AAC, 1080p, de préférence sous 40 Mo) ;
- * - presentation.jpg (facultatif ; image d'attente 1920x1080, sinon la première image de la vidéo) ;
+ * - presentation.jpeg (facultatif ; image d'attente en 16:9, sinon la première image de la vidéo) ;
  * - presentation.vtt (facultatif ; sous-titres français).
  * Tant que presentation.mp4 est absent, la section ne s'affiche pas.
  */
@@ -206,7 +206,7 @@ export const video = {
   text: "Comment un problème du terrain devient une solution partagée, en quelques minutes.",
   src: "/video/presentation.mp4",
   /** Chemin de l'image d'attente, ou null pour la première image de la vidéo. */
-  poster: null as string | null,
+  poster: "/video/presentation.jpeg" as string | null,
   /** Chemin des sous-titres WebVTT, ou null. */
   captions: null as string | null,
   playLabel: "Regarder la présentation",
