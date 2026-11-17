@@ -84,11 +84,11 @@ createRoot(document.getElementById("root")!).render(
               </Route>
               <Route path="orgs/:slug" element={<OrgDetailPage />} />
               <Route path="u/:username" element={<ProfilePage />} />
+              <Route path="faq" element={<FaqPage />} />
             </Route>
             <Route element={<Layout />}>
               <Route path="accueil" element={<Home />} />
               <Route path="recherche" element={<SearchPage />} />
-              <Route path="faq" element={<FaqPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>

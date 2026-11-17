@@ -561,6 +561,30 @@
 .pp-card:hover {
   background: var(--field-hi);
 }
+/* Lueur qui suit le pointeur sur une carte (même reflet que .lg) ; --mx / --my posés par
+   trackGlow (Glass.tsx). */
+.pp-glow {
+  position: relative;
+  isolation: isolate;
+}
+.pp-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    160px circle at var(--mx, 50%) var(--my, 0%),
+    var(--sheen),
+    transparent 72%
+  );
+}
+.pp-glow:hover::before {
+  opacity: 0.9;
+}
 .pp-card[data-selected="true"] {
   background: var(--field-hi);
   box-shadow:

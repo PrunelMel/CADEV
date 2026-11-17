@@ -177,6 +177,18 @@ type GlassProps<T extends ElementType> = {
   lens?: LensOptions;
 } & Omit<ComponentPropsWithoutRef<T>, "as" | "className">;
 
+/**
+ * À poser sur un conteneur : la surface de verre (.lg) ou la carte (.pp-glow) survolée reçoit la
+ * position du pointeur (--mx / --my), pour que sa lueur le suive.
+ */
+export function trackGlow(e: PointerEvent<HTMLElement>) {
+  const el = (e.target as Element).closest<HTMLElement>(".pp-glow, .lg");
+  if (!el || !e.currentTarget.contains(el)) return;
+  const r = el.getBoundingClientRect();
+  el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  el.style.setProperty("--my", `${e.clientY - r.top}px`);
+}
+
 /** Surface de verre : le reflet spéculaire suit le pointeur (variables --mx / --my). */
 export const Glass = forwardRef(function Glass<T extends ElementType = "div">(
   { as, variant = "", className = "", lens = false, ...rest }: GlassProps<T>,
